@@ -16,8 +16,8 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 REPO_URL="https://github.com/shivasymbl/forge.git"
 REPO_WEB_URL="https://github.com/shivasymbl/forge"  # without .git, for GitHub web APIs
-INSTALL_DIR="${MULTICA_INSTALL_DIR:-$HOME/.multica/server}"
-BREW_PACKAGE="multica-ai/tap/multica"
+INSTALL_DIR="${FORGE_INSTALL_DIR:-$HOME/.forge/server}"
+BREW_PACKAGE="asymbl/tap/forge"
 
 # Colors (disabled when not a terminal)
 if [ -t 1 ] || [ -t 2 ]; then
@@ -73,7 +73,7 @@ install_cli_brew() {
     if brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
       ok "Multica CLI already installed via Homebrew"
     else
-      fail "Failed to install multica via Homebrew."
+      fail "Failed to install forge via Homebrew."
     fi
   else
     ok "Multica CLI installed via Homebrew"
@@ -91,29 +91,29 @@ install_cli_binary() {
   fi
 
   local version="${latest#v}"
-  local url="https://github.com/shivasymbl/forge/releases/download/${latest}/multica-cli-${version}-${OS}-${ARCH}.tar.gz"
+  local url="https://github.com/shivasymbl/forge/releases/download/${latest}/forge-cli-${version}-${OS}-${ARCH}.tar.gz"
   local tmp_dir
   tmp_dir=$(mktemp -d)
 
   info "Downloading $url ..."
-  if ! curl -fsSL "$url" -o "$tmp_dir/multica.tar.gz"; then
+  if ! curl -fsSL "$url" -o "$tmp_dir/forge.tar.gz"; then
     rm -rf "$tmp_dir"
     fail "Failed to download CLI binary."
   fi
 
-  tar -xzf "$tmp_dir/multica.tar.gz" -C "$tmp_dir" multica
+  tar -xzf "$tmp_dir/forge.tar.gz" -C "$tmp_dir" forge
 
   # Try /usr/local/bin first, fall back to ~/.local/bin
   local bin_dir="/usr/local/bin"
   if [ -w "$bin_dir" ]; then
-    mv "$tmp_dir/multica" "$bin_dir/multica"
+    mv "$tmp_dir/forge" "$bin_dir/forge"
   elif command_exists sudo; then
-    sudo mv "$tmp_dir/multica" "$bin_dir/multica"
+    sudo mv "$tmp_dir/forge" "$bin_dir/forge"
   else
     bin_dir="$HOME/.local/bin"
     mkdir -p "$bin_dir"
-    mv "$tmp_dir/multica" "$bin_dir/multica"
-    chmod +x "$bin_dir/multica"
+    mv "$tmp_dir/forge" "$bin_dir/forge"
+    chmod +x "$bin_dir/forge"
     # Add to PATH if not already there
     if ! echo "$PATH" | tr ':' '\n' | grep -q "^$bin_dir$"; then
       export PATH="$bin_dir:$PATH"
@@ -201,10 +201,10 @@ upgrade_cli_brew() {
 }
 
 install_cli() {
-  if command_exists multica; then
+  if command_exists forge; then
     local current_ver
-    # `multica version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
-    current_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    # `forge version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
+    current_ver=$(forge version 2>/dev/null | awk '{print $2}' || echo "unknown")
 
     local latest_ver
     latest_ver=$(get_latest_version)
@@ -226,7 +226,7 @@ install_cli() {
     fi
 
     local new_ver
-    new_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    new_ver=$(forge version 2>/dev/null | awk '{print $2}' || echo "unknown")
     ok "Multica CLI upgraded ($current_ver → $new_ver)"
     return 0
   fi
@@ -238,8 +238,8 @@ install_cli() {
   fi
 
   # Verify
-  if ! command_exists multica; then
-    fail "CLI installed but 'multica' not found on PATH. You may need to restart your shell."
+  if ! command_exists forge; then
+    fail "CLI installed but 'forge' not found on PATH. You may need to restart your shell."
   fi
 }
 
@@ -419,8 +419,8 @@ run_stop() {
     warn "No Multica installation found at $INSTALL_DIR"
   fi
 
-  if command_exists multica; then
-    multica daemon stop 2>/dev/null && ok "Daemon stopped" || true
+  if command_exists forge; then
+    forge daemon stop 2>/dev/null && ok "Daemon stopped" || true
   fi
 
   printf "\n"
@@ -444,7 +444,7 @@ main() {
         echo "  --with-server   Install CLI + provision a self-host server (Docker)"
         echo "  --stop          Stop a self-hosted installation"
         echo ""
-        echo "After installation, run 'multica setup' to configure your environment."
+        echo "After installation, run 'forge setup' to configure your environment."
         exit 0
         ;;
       *) warn "Unknown option: $1" ;;

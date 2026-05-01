@@ -1,12 +1,12 @@
 version: 2
 
-project_name: multica
+project_name: forge
 
 builds:
   - id: multica
     main: ./cmd/multica
     dir: server
-    binary: multica
+    binary: forge
     ldflags:
       - -s -w
       - -X main.version={{.Version}}

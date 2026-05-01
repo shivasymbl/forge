@@ -34,8 +34,7 @@ archives:
         formats:
           - zip
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
-  # Versioned archive name used by current CLI / install scripts /
-  # desktop bootstrap going forward.
+  # Versioned archive — forge-cli-{version}-{os}-{arch}.tar.gz
   - id: versioned
     formats:
       - tar.gz
@@ -44,6 +43,18 @@ archives:
         formats:
           - zip
     name_template: "{{ .ProjectName }}-cli-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+
+  # Version-less "latest" archive — forge-cli-{os}-{arch}.tar.gz
+  # Powers: /releases/latest/download/forge-cli-linux-amd64.tar.gz
+  # Used by: install.sh, `forge update`, remote machine setup scripts
+  - id: latest
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}-cli-{{ .Os }}-{{ .Arch }}"
 
 checksum:
   name_template: "checksums.txt"

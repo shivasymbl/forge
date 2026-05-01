@@ -53,8 +53,8 @@ func releaseAssetCandidates(targetVersion, goos, goarch string) []string {
 	// Prefer the versioned name (current scheme); fall back to the legacy
 	// `multica_{os}_{arch}` name for releases that still ship it.
 	return []string{
-		fmt.Sprintf("multica-cli-%s-%s-%s.%s", version, goos, goarch, ext),
-		fmt.Sprintf("multica_%s_%s.%s", goos, goarch, ext),
+		fmt.Sprintf("forge-cli-%s-%s-%s.%s", version, goos, goarch, ext),
+		fmt.Sprintf("forge-cli-%s-%s.%s", goos, goarch, ext),
 	}
 }
 
@@ -73,7 +73,7 @@ func findReleaseAsset(assets []GitHubReleaseAsset, targetVersion, goos, goarch s
 
 func fetchReleaseByTag(tag string) (*GitHubRelease, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/multica-ai/multica/releases/tags/"+tag, nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/shivasymbl/forge/releases/tags/"+tag, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func fetchReleaseByTag(tag string) (*GitHubRelease, error) {
 // FetchLatestRelease fetches the latest release tag from the forge GitHub repo.
 func FetchLatestRelease() (*GitHubRelease, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/multica-ai/multica/releases/latest", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/repos/shivasymbl/forge/releases/latest", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +158,7 @@ func GetBrewPrefix() string {
 // UpdateViaBrew runs `brew upgrade multica-ai/tap/multica`.
 // Returns the combined output and any error.
 func UpdateViaBrew() (string, error) {
-	cmd := exec.Command("brew", "upgrade", "multica-ai/tap/multica")
+	cmd := exec.Command("brew", "upgrade", "asymbl/tap/forge")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("brew upgrade failed: %w", err)
@@ -216,9 +216,9 @@ func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Dur
 	}
 
 	// Extract the binary from the archive.
-	binaryName := "multica"
+	binaryName := "forge"
 	if runtime.GOOS == "windows" {
-		binaryName = "multica.exe"
+		binaryName = "forge.exe"
 	}
 	var binaryData []byte
 	if runtime.GOOS == "windows" {
@@ -232,7 +232,7 @@ func UpdateViaDownloadWithTimeout(targetVersion string, downloadTimeout time.Dur
 
 	// Atomic replace: write to temp file, then rename over the original.
 	dir := filepath.Dir(exePath)
-	tmpFile, err := os.CreateTemp(dir, "multica-update-*")
+	tmpFile, err := os.CreateTemp(dir, "forge-update-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp file: %w", err)
 	}

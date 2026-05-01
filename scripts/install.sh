@@ -91,7 +91,7 @@ install_cli_binary() {
   fi
 
   local version="${latest#v}"
-  local url="https://github.com/shivasymbl/forge/releases/download/${latest}/forge-cli-${version}-${OS}-${ARCH}.tar.gz"
+  local url="https://github.com/shivasymbl/forge/releases/latest/download/forge-cli-${OS}-${ARCH}.tar.gz"
   local tmp_dir
   tmp_dir=$(mktemp -d)
 

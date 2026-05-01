@@ -34,7 +34,6 @@ dmg:
   # appdmg handles DMG creation reliably on macOS without hdiutil race conditions.
   # sign: false — no codesigning for internal unsigned builds.
   sign: false
-  writeUpdateInfo: false
   format: UDZO
   contents:
     - x: 140

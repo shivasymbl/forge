@@ -60,10 +60,7 @@ const sourceSerif = Source_Serif_4({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#05070b" },
-  ],
+  themeColor: "#ffffff",
 };
 
 export const metadata: Metadata = {

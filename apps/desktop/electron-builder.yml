@@ -31,6 +31,22 @@ mac:
   # Requires APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD + APPLE_TEAM_ID at package time.
   # Skipped silently when those vars are absent (local/unsigned builds).
 dmg:
+  # appdmg handles DMG creation reliably on macOS without hdiutil race conditions.
+  # sign: false — no codesigning for internal unsigned builds.
+  sign: false
+  writeUpdateInfo: false
+  format: UDZO
+  contents:
+    - x: 140
+      y: 170
+      type: file
+    - x: 380
+      y: 170
+      type: link
+      path: /Applications
+  window:
+    width: 520
+    height: 340
   artifactName: forge-desktop-${version}-mac-${arch}.${ext}
 linux:
   target:

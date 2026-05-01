@@ -56,7 +56,9 @@ Flagged by best-practices review, intentionally deferred to Phase 2:
 
 10. **Docker Compose resource limits**: No `deploy.resources.limits` set on any service. Add CPU/memory limits before production hardening to prevent runaway containers from starving the host.
 11. **Postgres healthcheck `start_period`**: The postgres service healthcheck lacks a `start_period`, so compose may mark it unhealthy before the DB finishes initializing on first boot. Add `start_period: 30s` to the healthcheck block.
-12. **MULTICA_* env var rename**: All 15 `MULTICA_*` env var keys in `.env.example` and the Go server are kept for upstream compatibility. Renaming requires a coordinated change across the Go server, all deployment configs, and existing customer installs — deferred to Phase 2. A clarifying comment has been added to `.env.example`.
+12. **MULTICA_* env var rename**: All 15 `MULTICA_*` env var keys in `.env.example` and the Go server are intentionally kept for backward compatibility. The Go server reads these via `os.Getenv("MULTICA_*")` throughout — renaming them requires a coordinated change across the Go server, all deployment configs, docker-compose, and any existing installs. Deferred to Phase 2. A clarifying comment has been added to `.env.example`.
+13. **electron-builder.yml `hardenedRuntime: true`**: Missing from the mac build section. This flag is required for Apple notarization of the signed `.app`. electron-builder may enable it implicitly when `notarize` is configured, but explicit is safer. Add before the first production Mac release.
+14. **electron-builder.yml `gatekeeperAssess: false`**: Missing from the mac build section. This is the standard pattern for direct-distribution (non-App-Store) signed builds — it skips the local Gatekeeper check during packaging, which can fail in CI environments. Add before the first production Mac release.
 
 ## Acceptance Criteria Verification
 

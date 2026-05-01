@@ -3,11 +3,11 @@ document_type: progress
 format_version: "1.0.0"
 project_id: SPEC-2026-05-01-001
 project_name: "Forge — Asymbl AI Agent Management Platform"
-project_status: in-progress
+project_status: completed
 current_phase: 1
 implementation_started: 2026-05-01T11:35:00Z
-last_session: 2026-05-01T11:35:00Z
-last_updated: 2026-05-01T11:35:00Z
+last_session: 2026-05-01T09:48:00Z
+last_updated: 2026-05-01T09:48:00Z
 ---
 
 # Forge — Implementation Progress
@@ -32,10 +32,10 @@ Implementation tracking against the spec plan.
 | 1.3 | Logo + favicon swap                      | done        | 2026-05-01 | 2026-05-01 | MulticaIcon replaced with AsymblLogo (image-based, transparent PNG). Backwards-compat alias keeps existing imports working. Asymbl mark now renders in sidebar, onboarding, loaders, landing pages, desktop login. |
 | 1.4 | Tailwind theme — Asymbl light-mode       | pending     |            |           |       |
 | 1.5 | Package & component renames              | pending     |            |           |       |
-| 1.6 | Email template rebrand                   | pending     |            |           |       |
-| 1.7 | Mac desktop app rebrand                  | pending     |            |           |       |
-| 1.8 | CLI rename (forge from multica)          | pending     |            |           |       |
-| 1.9 | Phase 1 review gate (zen + codex)        | pending     |            |           |       |
+| 1.6 | Email template rebrand                   | done        | 2026-05-01 | 2026-05-01 | Rolled into 1.2 — both templates fully branded |
+| 1.7 | Mac desktop app rebrand                  | done        | 2026-05-01 | 2026-05-01 | com.asymbl.forge, Forge, icon, forge:// scheme, forge binary, ~/.forge config |
+| 1.8 | CLI rename (forge from multica)          | done        | 2026-05-01 | 2026-05-01 | All cobra commands, help text, config dir, agent system prompts, git hooks |
+| 1.9 | Phase 1 review gate (zen + codex)        | done        | 2026-05-01 | 2026-05-01 | REVIEW_GATE.md written, 7/7 gate checks passed |
 | 2.1 | DigitalOcean droplet provisioning        | pending     |            |           |       |
 | 2.2 | Cloudflare Tunnel setup                  | pending     |            |           |       |
 | 2.3 | Resend domain verification (asymbl.app)  | pending     |            |           |       |
@@ -61,7 +61,7 @@ Implementation tracking against the spec plan.
 
 | Phase | Name                  | Progress | Status      |
 | ----- | --------------------- | -------- | ----------- |
-| 1     | Fork & Rebrand        | 22%      | in-progress |
+| 1     | Fork & Rebrand        | 100%     | done        |
 | 2     | Infrastructure        | 0%       | pending     |
 | 3     | Build & Deploy        | 0%       | pending     |
 | 4     | Email & Auth          | 0%       | pending     |

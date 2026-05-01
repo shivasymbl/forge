@@ -29,7 +29,7 @@ Implementation tracking against the spec plan.
 | --- | ---------------------------------------- | ----------- | ---------- | --------- | ----- |
 | 1.1 | Initialize Forge repo                    | done        | 2026-05-01 | 2026-05-01 | Fork at github.com/shivasymbl/forge, CODEOWNERS + LICENSE.asymbl, tag v0.0.1-fork, draft PR #1 |
 | 1.2 | Web frontend brand replacement           | in-progress | 2026-05-01 |           | Done: layout.tsx metadata, favicon route, login page, connect-remote dialog, email templates. Pending: sidebar logo, modal copy, project/issue page strings, ~60 more files |
-| 1.3 | Logo + favicon swap                      | pending     |            |           |       |
+| 1.3 | Logo + favicon swap                      | done        | 2026-05-01 | 2026-05-01 | MulticaIcon replaced with AsymblLogo (image-based, transparent PNG). Backwards-compat alias keeps existing imports working. Asymbl mark now renders in sidebar, onboarding, loaders, landing pages, desktop login. |
 | 1.4 | Tailwind theme — Asymbl light-mode       | pending     |            |           |       |
 | 1.5 | Package & component renames              | pending     |            |           |       |
 | 1.6 | Email template rebrand                   | pending     |            |           |       |
@@ -61,7 +61,7 @@ Implementation tracking against the spec plan.
 
 | Phase | Name                  | Progress | Status      |
 | ----- | --------------------- | -------- | ----------- |
-| 1     | Fork & Rebrand        | 5%       | in-progress |
+| 1     | Fork & Rebrand        | 22%      | in-progress |
 | 2     | Infrastructure        | 0%       | pending     |
 | 3     | Build & Deploy        | 0%       | pending     |
 | 4     | Email & Auth          | 0%       | pending     |

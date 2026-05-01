@@ -88,7 +88,7 @@ func (p ProjectResourceForEnv) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// writeProjectResources writes .multica/project/resources.json into the
+// writeProjectResources writes .forge/project/resources.json into the
 // working directory when the task carries project context. The file is
 // always written when a project is attached (even with zero resources) so
 // agents can rely on its presence as a signal that a project exists.
@@ -96,7 +96,7 @@ func writeProjectResources(workDir string, ctx TaskContextForEnv) error {
 	if ctx.ProjectID == "" && len(ctx.ProjectResources) == 0 {
 		return nil
 	}
-	dir := filepath.Join(workDir, ".multica", "project")
+	dir := filepath.Join(workDir, ".forge", "project")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -282,7 +282,7 @@ func renderAutopilotContext(ctx TaskContextForEnv) string {
 	b.WriteString("## Quick Start\n\n")
 	b.WriteString("This is a run-only autopilot task with no assigned issue. Do not run `multica issue get` unless the autopilot instructions explicitly ask you to create or update an issue.\n\n")
 	if ctx.AutopilotID != "" {
-		fmt.Fprintf(&b, "Run `multica autopilot get %s --output json` if you need the full autopilot configuration.\n\n", ctx.AutopilotID)
+		fmt.Fprintf(&b, "Run `forge autopilot get %s --output json` if you need the full autopilot configuration.\n\n", ctx.AutopilotID)
 	}
 	if strings.TrimSpace(ctx.AutopilotDescription) != "" {
 		b.WriteString("## Autopilot Instructions\n\n")

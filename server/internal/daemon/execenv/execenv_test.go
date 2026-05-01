@@ -169,7 +169,7 @@ func TestPrepareWithProjectResources(t *testing.T) {
 	defer env.Cleanup(true)
 
 	// resources.json should exist and decode back to what we wrote.
-	resourcesPath := filepath.Join(env.WorkDir, ".multica", "project", "resources.json")
+	resourcesPath := filepath.Join(env.WorkDir, ".forge", "project", "resources.json")
 	raw, err := os.ReadFile(resourcesPath)
 	if err != nil {
 		t.Fatalf("failed to read resources.json: %v", err)
@@ -211,7 +211,7 @@ func TestPrepareWithProjectResources(t *testing.T) {
 		"GitHub repo",
 		"https://github.com/multica-ai/multica",
 		"default branch: `main`",
-		".multica/project/resources.json",
+		".forge/project/resources.json",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("CLAUDE.md missing %q", want)
@@ -267,7 +267,7 @@ func TestWriteProjectResourcesSkippedWhenNone(t *testing.T) {
 	if err := writeProjectResources(dir, TaskContextForEnv{}); err != nil {
 		t.Fatalf("writeProjectResources: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".multica", "project", "resources.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, ".forge", "project", "resources.json")); !os.IsNotExist(err) {
 		t.Errorf("expected no resources.json to be written when project context is empty")
 	}
 }
@@ -320,7 +320,7 @@ func TestPrepareWithRepoContext(t *testing.T) {
 	}
 	s := string(content)
 	for _, want := range []string{
-		"multica repo checkout",
+		"forge repo checkout",
 		"https://github.com/org/backend",
 		"https://github.com/org/frontend",
 	} {
@@ -445,7 +445,7 @@ func TestWriteContextFilesAutopilotRunOnly(t *testing.T) {
 		"run-1",
 		"autopilot-1",
 		"Check dependencies and report outdated packages.",
-		"multica autopilot get autopilot-1 --output json",
+		"forge autopilot get autopilot-1 --output json",
 		"no assigned issue",
 	} {
 		if !strings.Contains(s, want) {
@@ -567,7 +567,7 @@ func TestInjectRuntimeConfigClaude(t *testing.T) {
 
 	s := string(content)
 	for _, want := range []string{
-		"Multica Agent Runtime",
+		"Forge Agent Runtime",
 		"forge issue get",
 		"forge issue comment list",
 		"Go Conventions",
@@ -600,7 +600,7 @@ func TestInjectRuntimeConfigGemini(t *testing.T) {
 
 	s := string(content)
 	for _, want := range []string{
-		"Multica Agent Runtime",
+		"Forge Agent Runtime",
 		"forge issue get",
 		"Writing",
 	} {
@@ -637,7 +637,7 @@ func TestInjectRuntimeConfigCodex(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Multica Agent Runtime") {
+	if !strings.Contains(s, "Forge Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -662,7 +662,7 @@ func TestInjectRuntimeConfigNoSkills(t *testing.T) {
 
 	s := string(content)
 	if !strings.Contains(s, "forge issue get") {
-		t.Error("should reference multica CLI even without skills")
+		t.Error("should reference forge CLI even without skills")
 	}
 	if strings.Contains(s, "## Skills") {
 		t.Error("should not have Skills section when there are no skills")
@@ -816,7 +816,7 @@ func TestInjectRuntimeConfigOpencode(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Multica Agent Runtime") {
+	if !strings.Contains(s, "Forge Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -851,7 +851,7 @@ func TestInjectRuntimeConfigKiro(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Multica Agent Runtime") {
+	if !strings.Contains(s, "Forge Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -908,7 +908,7 @@ func TestPrepareWithRepoContextOpencode(t *testing.T) {
 	}
 	s := string(content)
 	for _, want := range []string{
-		"multica repo checkout",
+		"forge repo checkout",
 		"https://github.com/org/backend",
 	} {
 		if !strings.Contains(s, want) {
@@ -1064,7 +1064,7 @@ func TestInjectRuntimeConfigAutopilotRunOnlyNoIssueWorkflow(t *testing.T) {
 		"Autopilot in run-only mode",
 		"Autopilot run ID: `run-1`",
 		"Check dependencies and report outdated packages.",
-		"multica autopilot get autopilot-1 --output json",
+		"forge autopilot get autopilot-1 --output json",
 		"Your final assistant output is captured automatically as the autopilot run result",
 	} {
 		if !strings.Contains(s, want) {
@@ -1118,7 +1118,7 @@ func TestInjectRuntimeConfigHermes(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Multica Agent Runtime") {
+	if !strings.Contains(s, "Forge Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {

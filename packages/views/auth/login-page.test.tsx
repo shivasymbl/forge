@@ -99,7 +99,7 @@ describe("LoginPage", () => {
       screen.getByText(/sign in to forge/i),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/enter your email to get a login code/i),
+      screen.getByText(/Enter your Asymbl email to get a sign-in code/i),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/email/i)).toBeInTheDocument();
     expect(
@@ -469,7 +469,7 @@ describe("LoginPage", () => {
     );
 
     expect(
-      screen.getByText(/sign in to multica/i),
+      screen.getByText(/Sign in to Forge/i),
     ).toBeInTheDocument();
   });
 
@@ -655,7 +655,7 @@ describe("LoginPage", () => {
     await user.click(screen.getByRole("button", { name: /back/i }));
 
     expect(
-      screen.getByText(/sign in to multica/i),
+      screen.getByText(/Sign in to Forge/i),
     ).toBeInTheDocument();
   });
 

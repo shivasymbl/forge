@@ -149,6 +149,21 @@ export function canDeleteRuntime(
   );
 }
 
+export function canCreateAgent(ctx: PermissionContext): Decision {
+  if (isAdminLike(ctx.role)) return ALLOW;
+  return deny("not_admin_role", "Only workspace owners and admins can create agents.");
+}
+
+export function canViewRuntimes(ctx: PermissionContext): Decision {
+  if (isAdminLike(ctx.role)) return ALLOW;
+  return deny("not_admin_role", "Only workspace owners and admins can view runtimes.");
+}
+
+export function canConnectRuntime(ctx: PermissionContext): Decision {
+  if (isAdminLike(ctx.role)) return ALLOW;
+  return deny("not_admin_role", "Only workspace owners and admins can connect runtimes.");
+}
+
 // ---- Workspace -------------------------------------------------------------
 
 export function canUpdateWorkspaceSettings(ctx: PermissionContext): Decision {

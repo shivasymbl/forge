@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@multica/core/auth";
 import { useWorkspaceId } from "@multica/core/hooks";
 import { runtimeListOptions, runtimeKeys } from "@multica/core/runtimes/queries";
+import { memberListOptions } from "@multica/core/workspace/queries";
 import { useUpdatableRuntimeIds } from "@multica/core/runtimes/hooks";
 import { deriveRuntimeHealth } from "@multica/core/runtimes";
 import { useWSEvent } from "@multica/core/realtime";
@@ -90,19 +91,28 @@ export function RuntimesPage({ topSlot, bootstrapping }: RuntimesPageProps = {})
   const isLoading = useAuthStore((s) => s.isLoading);
   const wsId = useWorkspaceId();
   const qc = useQueryClient();
+  const currentUserId = useAuthStore((s) => s.user?.id);
   const [scope, setScope] = useState<RuntimeFilter>("mine");
   const [healthFilter, setHealthFilter] = useState<HealthFilter>("all");
   const [search, setSearch] = useState("");
   const [showConnectDialog, setShowConnectDialog] = useState(false);
 
+  const { data: members = [], isLoading: membersLoading } = useQuery(
+    memberListOptions(wsId),
+  );
+  const isAdmin = useMemo(() => {
+    const member = members.find((m) => m.user_id === currentUserId);
+    return member?.role === "owner" || member?.role === "admin";
+  }, [members, currentUserId]);
+
   // One unified cache per workspace: scope (Mine/All) is a view filter, not
   // a fetch dimension. Splitting on owner used to give us two TanStack cache
   // slots holding independent snapshots of the same runtime — switching scope
   // surfaced stale `last_seen_at` from whichever slot was older.
-  const { data: runtimes = [], isLoading: fetching } = useQuery(
-    runtimeListOptions(wsId),
-  );
-  const currentUserId = useAuthStore((s) => s.user?.id);
+  const { data: runtimes = [], isLoading: fetching } = useQuery({
+    ...runtimeListOptions(wsId),
+    enabled: isAdmin,
+  });
 
   const handleDaemonEvent = useCallback(() => {
     qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
@@ -148,7 +158,7 @@ export function RuntimesPage({ topSlot, bootstrapping }: RuntimesPageProps = {})
     });
   }, [scopedRuntimes, healthFilter, search, now]);
 
-  if (isLoading || fetching) return <RuntimesPageSkeleton />;
+  if (isLoading || membersLoading || fetching) return <RuntimesPageSkeleton />;
 
   const totalCount = runtimes.length;
   const scopedTotal = scopedRuntimes.length;
@@ -159,6 +169,7 @@ export function RuntimesPage({ topSlot, bootstrapping }: RuntimesPageProps = {})
       <PageHeaderBar
         totalCount={totalCount}
         onConnectRemote={() => setShowConnectDialog(true)}
+        isAdmin={isAdmin}
       />
 
       <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
@@ -166,7 +177,7 @@ export function RuntimesPage({ topSlot, bootstrapping }: RuntimesPageProps = {})
 
         {showEmpty ? (
           <div className="flex flex-1 items-center justify-center">
-            <EmptyState onConnectRemote={() => setShowConnectDialog(true)} />
+            <EmptyState onConnectRemote={() => setShowConnectDialog(true)} isAdmin={isAdmin} />
           </div>
         ) : (
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border bg-background">
@@ -210,9 +221,11 @@ export function RuntimesPage({ topSlot, bootstrapping }: RuntimesPageProps = {})
 function PageHeaderBar({
   totalCount,
   onConnectRemote,
+  isAdmin,
 }: {
   totalCount: number;
   onConnectRemote: () => void;
+  isAdmin: boolean;
 }) {
   return (
     <PageHeader className="justify-between px-5">
@@ -236,7 +249,7 @@ function PageHeaderBar({
           </a>
         </p>
       </div>
-      <Button type="button" size="sm" onClick={onConnectRemote}>
+      <Button type="button" size="sm" onClick={onConnectRemote} disabled={!isAdmin}>
         <Plus className="h-3 w-3" />
         Connect remote machine
       </Button>
@@ -429,7 +442,13 @@ function HealthChip({
 // workspace. Different from "filter matches nothing" (NoMatchesState).
 // ---------------------------------------------------------------------------
 
-function EmptyState({ onConnectRemote }: { onConnectRemote: () => void }) {
+function EmptyState({
+  onConnectRemote,
+  isAdmin,
+}: {
+  onConnectRemote: () => void;
+  isAdmin: boolean;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -440,15 +459,17 @@ function EmptyState({ onConnectRemote }: { onConnectRemote: () => void }) {
         Desktop auto-scans your local machine. For AWS EC2 or other remote
         machines, connect them using the setup wizard.
       </p>
-      <Button
-        type="button"
-        size="sm"
-        onClick={onConnectRemote}
-        className="mt-5"
-      >
-        <Plus className="h-3 w-3" />
-        Connect remote machine
-      </Button>
+      {isAdmin && (
+        <Button
+          type="button"
+          size="sm"
+          onClick={onConnectRemote}
+          className="mt-5"
+        >
+          <Plus className="h-3 w-3" />
+          Connect remote machine
+        </Button>
+      )}
     </div>
   );
 }

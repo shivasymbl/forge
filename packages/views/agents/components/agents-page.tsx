@@ -361,7 +361,7 @@ export function AgentsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-1 min-h-0 flex-col">
-        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} />
+        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} isAdmin={isWorkspaceAdmin} />
         <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
@@ -388,7 +388,7 @@ export function AgentsPage() {
   if (listError) {
     return (
       <div className="flex flex-1 min-h-0 flex-col">
-        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} />
+        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} isAdmin={isWorkspaceAdmin} />
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
           <AlertCircle className="h-8 w-8 text-destructive" />
           <div>
@@ -419,12 +419,13 @@ export function AgentsPage() {
       <PageHeaderBar
         totalCount={totalActiveCount}
         onCreate={() => setShowCreate(true)}
+        isAdmin={isWorkspaceAdmin}
       />
 
       <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
         {showEmpty ? (
           <div className="flex flex-1 items-center justify-center">
-            <EmptyState onCreate={() => setShowCreate(true)} />
+            <EmptyState onCreate={() => setShowCreate(true)} isAdmin={isWorkspaceAdmin} />
           </div>
         ) : (
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border bg-background">
@@ -498,9 +499,11 @@ export function AgentsPage() {
 function PageHeaderBar({
   totalCount,
   onCreate,
+  isAdmin,
 }: {
   totalCount: number;
   onCreate: () => void;
+  isAdmin: boolean;
 }) {
   return (
     <PageHeader className="justify-between px-5">
@@ -529,7 +532,7 @@ function PageHeaderBar({
           </a>
         </p>
       </div>
-      <Button type="button" size="sm" onClick={onCreate}>
+      <Button type="button" size="sm" onClick={onCreate} disabled={!isAdmin}>
         <Plus className="h-3 w-3" />
         New agent
       </Button>
@@ -816,7 +819,13 @@ function ArchivedToolbarRow({
 // Empty / no-matches states
 // ---------------------------------------------------------------------------
 
-function EmptyState({ onCreate }: { onCreate: () => void }) {
+function EmptyState({
+  onCreate,
+  isAdmin,
+}: {
+  onCreate: () => void;
+  isAdmin: boolean;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
@@ -827,10 +836,12 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
         Create an agent and assign it issues, like any teammate. Local agents
         run on your machine; cloud agents run on Forge&rsquo;s runtime.
       </p>
-      <Button type="button" onClick={onCreate} size="sm" className="mt-5">
-        <Plus className="h-3 w-3" />
-        New agent
-      </Button>
+      {isAdmin && (
+        <Button type="button" onClick={onCreate} size="sm" className="mt-5">
+          <Plus className="h-3 w-3" />
+          New agent
+        </Button>
+      )}
     </div>
   );
 }

@@ -236,7 +236,7 @@ func (h *Handler) DaemonRegister(w http.ResponseWriter, r *http.Request) {
 		}
 		// ownerID stays zero — COALESCE keeps the existing owner on upsert.
 	} else {
-		member, ok := h.requireWorkspaceMember(w, r, req.WorkspaceID, "workspace not found")
+		member, ok := h.requireWorkspaceRole(w, r, req.WorkspaceID, "workspace not found", "owner", "admin")
 		if !ok {
 			return
 		}

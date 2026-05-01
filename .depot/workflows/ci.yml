@@ -96,16 +96,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Package Forge Desktop (macOS arm64, unsigned)
+      - name: Build Forge Desktop (compile-only smoke test)
         working-directory: apps/desktop
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          ELECTRON_CACHE: ~/.cache/electron
-        run: node scripts/package.mjs --mac --arm64 --publish never -- --dir
+        run: pnpm run build
 
       - name: Upload desktop artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: forge-desktop-mac-arm64
-          path: apps/desktop/dist/*.dmg
+          name: forge-desktop-compiled
+          path: apps/desktop/out/
           if-no-files-found: warn

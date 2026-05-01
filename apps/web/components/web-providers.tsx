@@ -10,12 +10,9 @@ import {
 } from "@/features/auth/auth-cookie";
 import { PageviewTracker } from "./pageview-tracker";
 
-// Legacy token in localStorage → keep this session in token mode so users who
-// logged in before the cookie-auth migration stay authed. They migrate to
-// cookie mode on their next logout/login cycle (logout clears forge_token).
-// Sunset: once telemetry shows <1% of sessions still carry forge_token,
-// delete this branch and hard-code `cookieAuth` — the localStorage token is
-// XSS-exposed and is the exact thing the cookie migration exists to remove.
+// Token in localStorage → keep this session in token mode (e.g. Electron
+// desktop, CLI-auth flow). Users on cookie auth don't hit this path.
+// The forge_token key replaced the legacy multica_token key at Forge launch.
 function hasLegacyToken(): boolean {
   if (typeof window === "undefined") return false;
   try {

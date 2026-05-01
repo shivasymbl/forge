@@ -31,7 +31,7 @@ function AppContent() {
   const [bootstrapping, setBootstrapping] = useState(false);
 
   // Tell the main process which backend URL we talk to, so daemon-manager
-  // can pick the matching CLI profile (server_url from ~/.multica config).
+  // can pick the matching CLI profile (server_url from ~/.forge config).
   useEffect(() => {
     window.daemonAPI.setTargetApiUrl(DAEMON_TARGET_API_URL);
   }, []);

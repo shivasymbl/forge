@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main, plan/forge-asymbl-fork]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Frontend: typecheck + unit tests
+  # ─────────────────────────────────────────────
+  frontend:
+    runs-on: depot-ubuntu-24.04-4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build, typecheck, test
+        run: pnpm exec turbo build typecheck test --filter='!@multica/docs'
+
+  # ─────────────────────────────────────────────
+  # Backend: Go build + migrations + tests
+  # ─────────────────────────────────────────────
+  backend:
+    runs-on: depot-ubuntu-24.04-4
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_DB: forge
+          POSTGRES_USER: forge
+          POSTGRES_PASSWORD: forge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U forge -d forge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://forge:forge@localhost:5432/forge?sslmode=disable
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.1"
+          cache-dependency-path: server/go.sum
+
+      - name: Build
+        run: cd server && go build ./...
+
+      - name: Run migrations
+        run: cd server && go run ./cmd/migrate up
+
+      - name: Test
+        run: cd server && go test ./...
+
+  # ─────────────────────────────────────────────
+  # Desktop smoke: build macOS arm64 installer
+  # (no signing — unsigned smoke only)
+  # ─────────────────────────────────────────────
+  desktop-smoke:
+    runs-on: depot-macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Package Forge Desktop (macOS arm64, unsigned)
+        working-directory: apps/desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          ELECTRON_CACHE: ~/.cache/electron
+        run: node scripts/package.mjs --mac --arm64 --publish never
+
+      - name: Upload desktop artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-desktop-mac-arm64
+          path: apps/desktop/dist/*.dmg
+          if-no-files-found: warn

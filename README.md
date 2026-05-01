@@ -4,15 +4,13 @@
 
 <div align="center">
 
-<img src="apps/web/public/brand/asymbl-wordmark.png" alt="Asymbl" width="160">
+<img src="apps/web/public/brand/asymbl-logo-color.png" alt="Asymbl" width="200">
 
 # Forge
 
 **Asymbl's internal platform for AI agent operations.**
 
 Assign tasks to AI coding agents the same way you'd assign to a teammate. They pick up the work, write code, report blockers, and update statuses autonomously.
-
-[![Deploy](https://github.com/shivasymbl/forge/actions/workflows/deploy.yml/badge.svg)](https://github.com/shivasymbl/forge/actions/workflows/deploy.yml)
 
 [forge.asymbl.app](https://forge.asymbl.app) · [Releases](https://github.com/shivasymbl/forge/releases) · [Spec](docs/spec/active/2026-05-01-forge/)
 

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -394,8 +395,13 @@ func (h *Handler) ListAgentRuntimes(w http.ResponseWriter, r *http.Request) {
 		item := runtimeToResponse(rt)
 		if !isAdmin {
 			// Strip infrastructure-revealing fields for non-admins.
-			// Members need runtime status/name for agent presence display,
+			// Members need runtime status for agent presence display,
 			// but not the provider type (hermes/openclaw) or launch command.
+			//
+			// The daemon registers runtimes with names like "Hermes (ben-corpay)".
+			// Strip the "Provider (" prefix and trailing ")" so members see
+			// just the device name (e.g. "ben-corpay") without the provider type.
+			item.Name = stripProviderFromName(item.Name, rt.Provider)
 			item.Provider = ""
 			item.LaunchHeader = ""
 		}
@@ -403,6 +409,22 @@ func (h *Handler) ListAgentRuntimes(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+// stripProviderFromName removes the "Provider (name)" prefix that the daemon
+// embeds when registering. E.g. "Hermes (ben-corpay)" with provider "hermes"
+// returns "ben-corpay". Falls back to the original name if pattern doesn't match.
+func stripProviderFromName(name, provider string) string {
+	if provider == "" || len(name) == 0 {
+		return name
+	}
+	// Capitalise first letter to match the daemon's "Hermes (" format.
+	providerTitle := strings.ToUpper(provider[:1]) + provider[1:]
+	prefix := providerTitle + " ("
+	if strings.HasPrefix(name, prefix) && strings.HasSuffix(name, ")") {
+		return name[len(prefix) : len(name)-1]
+	}
+	return name
 }
 
 // DeleteAgentRuntime deletes a runtime after permission and dependency checks.

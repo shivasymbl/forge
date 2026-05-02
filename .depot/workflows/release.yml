@@ -30,8 +30,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
-          workdir: server
+          args: release --clean --skip=homebrew
         env:
           GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
 

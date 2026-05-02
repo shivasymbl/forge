@@ -34,43 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
-  # Build and upload unsigned macOS desktop DMG
-  release-desktop-mac:
-    runs-on: macos-latest
-    needs: release-cli
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: server/go.mod
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Package Forge Desktop (macOS arm64)
-        working-directory: apps/desktop
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          ELECTRON_CACHE: ~/.cache/electron
-        run: node scripts/package.mjs --mac --arm64
-
-      - name: Upload desktop DMG to release
-        env:
-          GH_TOKEN: ${{ secrets.GHCR_TOKEN }}
-        run: |
-          TAG=${{ github.ref_name }}
-          gh release upload "$TAG" apps/desktop/dist/forge-desktop-*.dmg \
-            --repo shivasymbl/forge --clobber
+  # NOTE: macOS DMG must be built locally and uploaded manually.
+  # Depot CI has no macOS runners — macos-latest silently runs on Linux,
+  # which cannot load macOS native modules (iconv-corefoundation, etc).
+  # Build locally: cd apps/desktop && node scripts/package.mjs --mac --arm64
+  # Upload: gh release upload <tag> dist/forge-desktop-*.dmg --repo shivasymbl/forge

@@ -32,7 +32,7 @@ jobs:
 
   # Build and upload signed macOS desktop DMG (requires Apple certs)
   release-desktop-mac:
-    runs-on: depot-macos-latest
+    runs-on: macos-latest
     needs: release-cli
     permissions:
       contents: write

@@ -187,6 +187,36 @@ that should not be visible to workspace members.
 
 ---
 
+---
+
+## Category 5 — Design System / Brand Tokens
+
+Asymbl Brand Style Guide applied to tokens, typography, and UI components.
+Reference: `/Users/sdevinarayanan/Downloads/Brand Style Guide _standalone_.html`
+
+### 5.1 Design tokens — warm paper bg, warm borders, ink text, semantic status colors
+**File:** `packages/ui/styles/tokens.css`
+**Changes:**
+- `--background: #fafaf7` (warm paper, was `#ffffff` cold white)
+- `--border` / `--input` / `--sidebar-border`: `#e8e6de` (warm beige, was cool oklch gray)
+- `--muted-foreground: #3a4556` (ink2 from brand guide, was `#595959`)
+- `--success: #1f6d3a` (forest green text, readable on `bg-success/10`; was `#70bf75` low-contrast)
+- `--warning: #8a5a00` (dark amber text, readable on `bg-warning/10`; was `#fbbe01` unreadable yellow)
+**Why:** Brand guide specifies warm paper bg, warm beige borders, ink2 secondary text, and semantic chip colors with dark text on soft backgrounds for readability. Old tokens were missing or using wrong shades.
+**Cascades to:** `HealthBadge` (runtime online/offline), `AgentStatusDot`, `PRIORITY_CONFIG` badges, all muted text — no component changes needed.
+**Verify:** `grep -q 'fafaf7' packages/ui/styles/tokens.css`
+**Verify:** `grep -q '1f6d3a' packages/ui/styles/tokens.css`
+
+### 5.2 Brand serif font — Fraunces (replaces Source Serif 4)
+**Files:** `apps/web/app/layout.tsx`, `apps/desktop/src/renderer/src/main.tsx`, `apps/desktop/package.json`
+**Change:** `Source_Serif_4` / `@fontsource-variable/source-serif-4` replaced with `Fraunces` / `@fontsource-variable/fraunces` as the `--font-serif` CSS variable.
+**Applied to (font-serif class):** Login page CardTitles, agents-page empty state h2, runtimes-page empty state h2.
+**Why:** Fraunces is the actual Asymbl brand display serif. Source Serif 4 was a generic substitute from the initial rebrand. Brand guide uses Fraunces for h1, h2, card names, eyebrows.
+**Verify:** `grep -q 'Fraunces' apps/web/app/layout.tsx`
+**Verify:** `grep -q 'fraunces' apps/desktop/src/renderer/src/main.tsx`
+
+---
+
 ## CI Guard
 
 The script `scripts/verify-patches.sh` checks every `Verify:` entry above.

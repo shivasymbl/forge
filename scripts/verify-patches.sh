@@ -108,6 +108,25 @@ check "4.1 PostHog exception capture enabled" \
 
 echo ""
 
+# ── 5. Design System ──────────────────────────────────────────────────────────
+echo "[ 5 ] Design System"
+check "5.1 tokens.css: warm paper background (#fafaf7)" \
+  "grep -q 'fafaf7' packages/ui/styles/tokens.css"
+
+check "5.1 tokens.css: forest green success token (#1f6d3a)" \
+  "grep -q '1f6d3a' packages/ui/styles/tokens.css"
+
+check "5.1 tokens.css: warm beige border (#e8e6de)" \
+  "grep -q 'e8e6de' packages/ui/styles/tokens.css"
+
+check "5.2 web layout: Fraunces is the brand serif (not Source Serif 4)" \
+  "grep -q 'Fraunces' apps/web/app/layout.tsx"
+
+check "5.2 desktop: Fraunces fontsource import" \
+  "grep -q 'fraunces' apps/desktop/src/renderer/src/main.tsx"
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "=== Results: $PASS passed, $FAIL failed ==="
 echo ""

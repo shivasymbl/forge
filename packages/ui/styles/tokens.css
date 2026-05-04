@@ -82,13 +82,14 @@
     --chart-4: #90d0fe;
     --chart-5: #b6eafc;
     --radius: 0.625rem;
-    --sidebar: #e8f4fc;
-    --sidebar-foreground: #032d60;
+    /* Navy sidebar — brand guide: "Navy stays for chrome" */
+    --sidebar: #032d60;
+    --sidebar-foreground: #e8f4fc;
     --sidebar-primary: #dd7001;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #b6eafc;
-    --sidebar-accent-foreground: #032d60;
-    --sidebar-border: #e8e6de;
+    --sidebar-accent: #1a4a80;
+    --sidebar-accent-foreground: #e8f4fc;
+    --sidebar-border: #1a4a80;
     --sidebar-ring: #90d0fe;
     --brand: #dd7001;
     --brand-foreground: #ffffff;
@@ -128,13 +129,14 @@
     --chart-3: #0d99da;
     --chart-4: #90d0fe;
     --chart-5: #b6eafc;
-    --sidebar: #e8f4fc;
-    --sidebar-foreground: #032d60;
+    /* Navy sidebar — brand guide: "Navy stays for chrome" */
+    --sidebar: #032d60;
+    --sidebar-foreground: #e8f4fc;
     --sidebar-primary: #dd7001;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #b6eafc;
-    --sidebar-accent-foreground: #032d60;
-    --sidebar-border: #e8e6de;
+    --sidebar-accent: #1a4a80;
+    --sidebar-accent-foreground: #e8f4fc;
+    --sidebar-border: #1a4a80;
     --sidebar-ring: #90d0fe;
     --brand: #dd7001;
     --brand-foreground: #ffffff;

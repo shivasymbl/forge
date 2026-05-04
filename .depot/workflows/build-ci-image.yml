@@ -1,0 +1,29 @@
+name: Build CI Image
+
+on:
+  workflow_dispatch:        # manual trigger
+  push:
+    branches: [main]
+    paths:
+      - pnpm-lock.yaml      # auto-rebuild when JS deps change
+      - pnpm-workspace.yaml
+
+jobs:
+  build-image:
+    runs-on: depot-ubuntu-24.04-4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install JS dependencies into pnpm store
+        run: pnpm install --frozen-lockfile
+
+      - name: Snapshot to Depot registry
+        uses: depot/snapshot-action@v1
+        with:
+          image: p6gdqmvg63.registry.depot.dev/forge-ci:latest

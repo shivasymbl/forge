@@ -15,18 +15,13 @@ jobs:
   # Frontend: typecheck + unit tests
   # ─────────────────────────────────────────────
   frontend:
-    runs-on: depot-ubuntu-24.04-4
+    runs-on:
+      size: depot-ubuntu-24.04-4
+      image: p6gdqmvg63.registry.depot.dev/forge-ci:latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
+      - name: Install dependencies (pnpm store pre-baked in image — near instant)
         run: pnpm install --frozen-lockfile
 
       - name: Build, typecheck, test

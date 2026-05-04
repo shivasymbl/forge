@@ -90,7 +90,7 @@ function SortableTabItem({ tab, isActive, isOnly }: { tab: Tab; isActive: boolea
         "select-none cursor-default",
         isActive
           ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-          : "bg-sidebar-accent/50 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          : "bg-sidebar-accent/50 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground",
         isDragging && "opacity-60",
       )}
     >
@@ -108,7 +108,7 @@ function SortableTabItem({ tab, isActive, isOnly }: { tab: Tab; isActive: boolea
         <span
           onClick={handleClose}
           onPointerDown={stopDragOnClose}
-          className="hidden size-3.5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors group-hover:flex hover:bg-muted-foreground/20 hover:text-foreground"
+          className="hidden size-3.5 shrink-0 items-center justify-center rounded-sm text-sidebar-foreground/50 transition-colors group-hover:flex hover:bg-sidebar-foreground/10 hover:text-sidebar-foreground"
         >
           <X className="size-2.5" />
         </span>
@@ -135,7 +135,7 @@ function NewTabButton() {
     <button
       onClick={handleClick}
       style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
-      className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/70 transition-colors hover:bg-muted/50 hover:text-muted-foreground"
+      className="flex size-7 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/50 transition-colors hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
     >
       <Plus className="size-3.5" />
     </button>

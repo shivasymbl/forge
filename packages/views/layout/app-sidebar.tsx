@@ -184,7 +184,7 @@ function SortablePinItem({
           }
         }}
         className={cn(
-          "text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground",
+          "text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground",
           isDragging && "pointer-events-none",
         )}
       >

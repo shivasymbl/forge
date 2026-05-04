@@ -451,7 +451,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <span className="flex-1 truncate font-medium">
                         {workspace?.name ?? "Forge"}
                       </span>
-                      <ChevronDown className="size-3 text-muted-foreground" />
+                      <ChevronDown className="size-3 text-sidebar-foreground/50" />
                     </SidebarMenuButton>
                   }
                 />
@@ -564,7 +564,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             )}
             <SidebarMenuItem>
               <SidebarMenuButton
-                className="text-muted-foreground"
+                className="text-sidebar-foreground/70 hover:text-sidebar-foreground"
                 onClick={() => useModalStore.getState().open("quick-create-issue")}
               >
                 <span className="relative">
@@ -591,7 +591,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
                       >
                         <item.icon />
                         <span>{item.label}</span>
@@ -655,7 +655,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
                       >
                         <item.icon />
                         <span>{item.label}</span>
@@ -679,7 +679,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
                       >
                         <item.icon />
                         <span>{item.label}</span>

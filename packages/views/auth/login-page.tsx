@@ -292,7 +292,7 @@ export function LoginPage({
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
-            <CardTitle className="text-2xl">Authorize CLI</CardTitle>
+            <CardTitle className="font-serif text-2xl font-medium tracking-tight">Authorize CLI</CardTitle>
             <CardDescription>
               Allow the CLI to access Forge as{" "}
               <span className="font-medium text-foreground">
@@ -336,7 +336,7 @@ export function LoginPage({
         <Card className="w-full max-w-sm">
           <CardHeader className="text-center">
             {logo && <div className="mx-auto mb-4">{logo}</div>}
-            <CardTitle className="text-2xl">Check your email</CardTitle>
+            <CardTitle className="font-serif text-2xl font-medium tracking-tight">Check your email</CardTitle>
             <CardDescription>
               We sent a verification code to{" "}
               <span className="font-medium text-foreground">{email}</span>
@@ -403,7 +403,7 @@ export function LoginPage({
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           {logo && <div className="mx-auto mb-4">{logo}</div>}
-          <CardTitle className="text-2xl">Sign in to Forge</CardTitle>
+          <CardTitle className="font-serif text-2xl font-medium tracking-tight">Sign in to Forge</CardTitle>
           <CardDescription>
             Enter your Asymbl email to get a sign-in code
           </CardDescription>

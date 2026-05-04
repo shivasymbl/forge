@@ -53,7 +53,8 @@
 
 :root {
     /* Asymbl brand — light mode only */
-    --background: #ffffff;
+    /* Page bg: warm paper per brand guide (#fafaf7). Cards stay #ffffff so they float. */
+    --background: #fafaf7;
     --foreground: #032d60;
     --card: #ffffff;
     --card-foreground: #032d60;
@@ -65,12 +66,14 @@
     --secondary: #e8f4fc;
     --secondary-foreground: #032d60;
     --muted: #e8f4fc;
-    --muted-foreground: #595959;
+    /* ink2 from brand guide — readable navy-gray, replaces neutral #595959 */
+    --muted-foreground: #3a4556;
     --accent: #90d0fe;
     --accent-foreground: #032d60;
     --destructive: #b90e0a;
-    --border: oklch(0.92 0.004 286.32);
-    --input: oklch(0.92 0.004 286.32);
+    /* Warm beige border per brand guide (--line: #e8e6de) — pairs with warm paper bg */
+    --border: #e8e6de;
+    --input: #e8e6de;
     --ring: #90d0fe;
     /* Asymbl navy-to-sky gradient for charts */
     --chart-1: #032d60;
@@ -85,12 +88,14 @@
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #b6eafc;
     --sidebar-accent-foreground: #032d60;
-    --sidebar-border: oklch(0.92 0.004 286.32);
+    --sidebar-border: #e8e6de;
     --sidebar-ring: #90d0fe;
     --brand: #dd7001;
     --brand-foreground: #ffffff;
-    --success: #70bf75;
-    --warning: #fbbe01;
+    /* Forest green — readable on bg-success/10, matches brand chip system */
+    --success: #1f6d3a;
+    /* Dark amber — readable on bg-warning/10, matches brand chip system */
+    --warning: #8a5a00;
     --info: #385cae;
     --priority: #dd7001;
     --scrollbar-thumb: oklch(0 0 0 / 10%);
@@ -100,7 +105,7 @@
 
 /* Dark mode intentionally matches light mode — Asymbl Forge is a light-only internal tool */
 .dark {
-    --background: #ffffff;
+    --background: #fafaf7;
     --foreground: #032d60;
     --card: #ffffff;
     --card-foreground: #032d60;
@@ -111,12 +116,12 @@
     --secondary: #e8f4fc;
     --secondary-foreground: #032d60;
     --muted: #e8f4fc;
-    --muted-foreground: #595959;
+    --muted-foreground: #3a4556;
     --accent: #90d0fe;
     --accent-foreground: #032d60;
     --destructive: #b90e0a;
-    --border: oklch(0.92 0.004 286.32);
-    --input: oklch(0.92 0.004 286.32);
+    --border: #e8e6de;
+    --input: #e8e6de;
     --ring: #90d0fe;
     --chart-1: #032d60;
     --chart-2: #385cae;
@@ -129,12 +134,12 @@
     --sidebar-primary-foreground: #ffffff;
     --sidebar-accent: #b6eafc;
     --sidebar-accent-foreground: #032d60;
-    --sidebar-border: oklch(0.92 0.004 286.32);
+    --sidebar-border: #e8e6de;
     --sidebar-ring: #90d0fe;
     --brand: #dd7001;
     --brand-foreground: #ffffff;
-    --success: #70bf75;
-    --warning: #fbbe01;
+    --success: #1f6d3a;
+    --warning: #8a5a00;
     --info: #385cae;
     --priority: #dd7001;
     --scrollbar-thumb: oklch(0 0 0 / 10%);

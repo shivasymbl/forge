@@ -831,7 +831,7 @@ function EmptyState({
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <Bot className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h2 className="mt-4 text-base font-semibold">No agents yet</h2>
+      <h2 className="mt-4 font-serif text-lg font-medium tracking-tight">No agents yet</h2>
       <p className="mt-1 max-w-md text-sm text-muted-foreground">
         Create an agent and assign it issues, like any teammate. Local agents
         run on your machine; cloud agents run on Forge&rsquo;s runtime.

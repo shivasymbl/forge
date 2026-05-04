@@ -363,6 +363,17 @@ func parseSinceParam(r *http.Request, defaultDays int) pgtype.Timestamptz {
 	return pgtype.Timestamptz{Time: t, Valid: true}
 }
 
+// ListAgentRuntimes returns all runtimes in the workspace. Accessible to all
+// workspace members, but infrastructure-revealing fields are stripped for
+// non-admins so members can derive agent presence (online/offline) without
+// learning provider type or system environment details.
+//
+// Fields stripped for members: Provider, LaunchHeader, DeviceInfo, Metadata.
+// Name is also cleaned via stripProviderFromName (daemon embeds provider in
+// the name, e.g. "Hermes (ben-corpay)" → "ben-corpay").
+//
+// Per-runtime sub-routes (/usage, /activity, DELETE, /update, /models, etc.)
+// remain gated to admin/owner in the router — this endpoint is read-only.
 func (h *Handler) ListAgentRuntimes(w http.ResponseWriter, r *http.Request) {
 	workspaceID := h.resolveWorkspaceID(r)
 

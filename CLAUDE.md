@@ -356,3 +356,69 @@ All queries filter by `workspace_id`. Membership checks gate access. `X-Workspac
 ## Agent Assignees
 
 Assignees are polymorphic — can be a member or an agent. `assignee_type` + `assignee_id` on issues. Agents render with distinct styling (purple background, robot icon).
+
+---
+
+## Forge Fork Rules
+
+This repo is Asymbl's self-hosted fork of multica-ai/multica. The following rules are specific to our fork and **override** any upstream behavior.
+
+### Patch verification (MANDATORY before upstream sync)
+```bash
+bash scripts/verify-patches.sh   # must exit 0 before any upstream cherry-pick lands
+```
+Never `git merge upstream/main` — always cherry-pick individual commits and re-verify.
+Full sync procedure in `docs/fork-patches.md`.
+
+### RBAC rules — DO NOT remove these gates without security review
+
+| Route | Gate | File |
+|-------|------|------|
+| `POST /api/agents` | admin/owner only | `server/cmd/server/router.go` |
+| `GET /api/runtimes` | all members, **provider + device_info + metadata stripped** | `server/internal/handler/runtime.go` |
+| `/api/runtimes/{id}/*` | admin/owner only | `server/cmd/server/router.go` |
+| Daemon PAT registration | admin/owner only | `server/internal/handler/daemon.go` |
+| Frontend: agents create button | disabled for members | `packages/views/agents/components/agents-page.tsx` |
+| Frontend: runtimes page/detail | redirect members to `/` | `packages/views/runtimes/components/runtimes-page.tsx` + `runtime-detail-page.tsx` |
+| Frontend: "Create workspace" | hidden for members | `packages/views/layout/app-sidebar.tsx` |
+
+**mdt_ daemon tokens** (Ben droplets) bypass role checks — only PAT tokens are gated.
+
+### RBAC extension pattern
+When adding a new admin-only route:
+1. **Router:** `r.With(middleware.RequireWorkspaceRole(queries, "owner", "admin")).Method(...)`
+2. **Response stripping:** use `middleware.MemberFromContext(r.Context())` in the handler, check `member.Role`
+3. **Frontend gate:** derive `isAdmin` from `memberListOptions` (placed BEFORE the gated useQuery call), pass as prop
+4. **Add to verify script:** `check "X.Y description" "grep -q 'pattern' file"`
+5. **Add to runbook:** `docs/fork-patches.md`
+
+### Runtime field stripping — all four fields
+When stripping provider info for non-admins, always clear ALL four:
+```go
+item.Name = stripProviderFromName(item.Name, rt.Provider)  // "Hermes (x)" → "x"
+item.Provider = ""
+item.LaunchHeader = ""
+item.DeviceInfo = ""   // "Hermes Agent v0.11.0..." or "OpenClaw 2026.4.26"
+item.Metadata = map[string]any{}
+```
+Missing any one of these leaks provider identity.
+
+### Desktop DMG — Depot CI cannot build it
+Depot CI has no macOS runners. `macos-latest` in `.depot/workflows/*.yml` falls back to Linux.
+DMG builds are done locally: `node scripts/package.mjs --mac --arm64`
+Upload: `GH_TOKEN=$(gh auth token) gh release upload <tag> dist/*.dmg --repo shivasymbl/forge`
+
+### Cloudflare subdomain depth
+Wildcard SSL `*.asymbl.app` covers ONE level only. Use flat subdomains:
+- ✅ `forge-kuma.asymbl.app`
+- ❌ `kuma.forge.asymbl.app` (two levels — SSL fails)
+
+### Doppler secrets need a deploy to activate
+Adding a secret to Doppler does NOT update the running container.
+Push to main → deploy.yml runs → refreshes `/root/.env` → secrets are live.
+Manual shortcut: `echo 'KEY=val' >> /root/.env && docker compose ... --force-recreate backend`
+
+### TanStack Query — use enabled:isAdmin, not retry:false
+`retry: false` stops retries but not window-focus refetches.
+For admin-only queries: `enabled: isAdmin` prevents the request entirely.
+`isAdmin` must be derived from `memberListOptions` placed BEFORE the gated `useQuery` in the hook list.

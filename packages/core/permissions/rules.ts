@@ -149,16 +149,30 @@ export function canDeleteRuntime(
   );
 }
 
+/**
+ * Gate for creating agents. Mirrors `POST /api/agents` → RequireWorkspaceRole.
+ * Use: disable "New agent" button and hide it in empty-state for members.
+ */
 export function canCreateAgent(ctx: PermissionContext): Decision {
   if (isAdminLike(ctx.role)) return ALLOW;
   return deny("not_admin_role", "Only workspace owners and admins can create agents.");
 }
 
+/**
+ * Gate for the runtimes management page and "Connect remote machine" button.
+ * Note: GET /api/runtimes IS accessible to members (for agent presence display),
+ * but the runtimes page and detail page are admin-only UI surfaces.
+ */
 export function canViewRuntimes(ctx: PermissionContext): Decision {
   if (isAdminLike(ctx.role)) return ALLOW;
   return deny("not_admin_role", "Only workspace owners and admins can view runtimes.");
 }
 
+/**
+ * Gate for the "Connect remote machine" button and daemon PAT registration.
+ * Mirrors `POST /api/daemon/register` → requireWorkspaceRole(owner, admin) for PAT path.
+ * mdt_ daemon tokens (existing connected runtimes) bypass this gate.
+ */
 export function canConnectRuntime(ctx: PermissionContext): Decision {
   if (isAdminLike(ctx.role)) return ALLOW;
   return deny("not_admin_role", "Only workspace owners and admins can connect runtimes.");

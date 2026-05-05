@@ -148,6 +148,10 @@ jobs:
             # Update image tags in env
             sed -i "s|MULTICA_IMAGE_TAG=.*|MULTICA_IMAGE_TAG=sha-${{ steps.tags.outputs.sha }}|" /root/.env
 
+            # Sync compose file from git — prevents drift when compose env vars change
+            curl -fsSL "https://raw.githubusercontent.com/shivasymbl/forge/${{ steps.tags.outputs.sha }}/docker-compose.selfhost.yml" \
+              -o /root/docker-compose.selfhost.yml
+
             # Pull new images
             docker compose -f /root/docker-compose.selfhost.yml --env-file /root/.env pull backend frontend
 

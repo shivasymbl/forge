@@ -7,7 +7,7 @@ CREATE TABLE workspace_slack_integrations (
     trigger_statuses JSONB      NOT NULL DEFAULT '[]',
     last_sent_at    TIMESTAMPTZ,
     last_error      TEXT,
-    created_by      UUID        REFERENCES members(id) ON DELETE SET NULL,
+    created_by      UUID        REFERENCES member(id) ON DELETE SET NULL,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );

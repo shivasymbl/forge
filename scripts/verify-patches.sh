@@ -49,6 +49,15 @@ check "1.5 router.go reads ALLOWED_EMAIL_DOMAINS env var (plural, not singular)"
 check "1.6 Email service defaults to forge@asymbl.app" \
   "grep -q 'forge@asymbl.app' server/internal/service/email.go"
 
+check "1.7 Web layout: metadataBase is forge.asymbl.app" \
+  "grep -q 'forge.asymbl.app' apps/web/app/layout.tsx"
+
+check "1.8 Web layout: no Multica brand strings" \
+  "! grep -q '\"Multica' apps/web/app/layout.tsx"
+
+check "1.9 Archive label replaces Cancelled in status config" \
+  "grep -q '\"Archive\"' packages/core/issues/config/status.ts"
+
 echo ""
 
 # ── 2. RBAC ──────────────────────────────────────────────────────────────────
@@ -124,6 +133,57 @@ check "5.2 web layout: Fraunces is the brand serif (not Source Serif 4)" \
 
 check "5.2 desktop: Fraunces fontsource import" \
   "grep -q 'fraunces' apps/desktop/src/renderer/src/main.tsx"
+
+echo ""
+
+# ── 6. Slack Integration ──────────────────────────────────────────────────────
+echo "[ 6 ] Slack Integration"
+
+check "6.1 Slack integration package exists" \
+  "test -f server/internal/integrations/slack/notify.go"
+
+check "6.2 Slack hook wired in notification_listeners" \
+  "grep -q 'slack.NotifyStatusChange' server/cmd/server/notification_listeners.go"
+
+check "6.3 Slack routes have admin RBAC gate in router" \
+  "grep -q 'integrations/slack' server/cmd/server/router.go && \
+   grep -q 'RequireWorkspaceRole' server/cmd/server/router.go"
+
+check "6.4 Slack DB migration exists" \
+  "ls server/migrations/*_workspace_slack_integrations.up.sql > /dev/null 2>&1"
+
+echo ""
+
+# ── 7. Brand Audit (B1-B10) ───────────────────────────────────────────────────
+echo "[ 7 ] Brand Audit (B1-B10)"
+
+check "7.1 co-authored-by hook: forge-agent identity" \
+  "grep -q 'forge-agent <github@asymbl.com>' server/internal/daemon/repocache/cache.go"
+
+check "7.2 co-authored-by hook: no multica-agent in hook script" \
+  "! grep -q 'multica-agent <github@multica.ai>' server/internal/daemon/repocache/cache.go"
+
+check "7.3 desktop app.setName is Forge" \
+  "grep -q 'app.setName(\"Forge\")' apps/desktop/src/main/index.ts"
+
+check "7.4 desktop package.json productName is Forge" \
+  "node -e \"const p=require('./apps/desktop/package.json'); process.exit(p.productName==='Forge'?0:1)\""
+
+check "7.5 no multica.ai in desktop package.json" \
+  "! grep -q 'multica.ai' apps/desktop/package.json"
+
+check "7.6 runtimes-page has no multica.ai external link" \
+  "! grep -q 'multica.ai' packages/views/runtimes/components/runtimes-page.tsx"
+
+check "7.7 ACP client name is forge-agent-sdk (codex + hermes)" \
+  "grep -q 'forge-agent-sdk' server/pkg/agent/codex.go && \
+   grep -q 'forge-agent-sdk' server/pkg/agent/hermes.go"
+
+check "7.8 web layout has no multica.ai metadataBase" \
+  "! grep -q 'multica.ai' apps/web/app/layout.tsx"
+
+check "7.9 web layout has no multica_hq twitter handle" \
+  "! grep -q 'multica_hq' apps/web/app/layout.tsx"
 
 echo ""
 

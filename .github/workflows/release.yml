@@ -370,11 +370,48 @@ jobs:
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # electron-builder's GitHub publisher reads this:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Disable code signing on Linux/Windows for now — the public
-          # release is unsigned for these platforms, the CLI carries the
-          # trust boundary. Set CSC_LINK in repo secrets to enable
-          # Windows signing later.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: node scripts/package.mjs --${{ matrix.target }} --x64 --arm64 --publish always
+          TARGET: ${{ matrix.target }}
+        run: node scripts/package.mjs --$TARGET --x64 --arm64 --publish always
+
+  # macOS DMG — requires a real macOS runner (GitHub-hosted macos-latest).
+  # Depot CI has no macOS runners; this job must stay in .github/workflows/.
+  # Runs only on our fork. Notarization is skipped unless APPLE_TEAM_ID is set.
+  # To enable signed + notarized builds: add APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD,
+  # APPLE_TEAM_ID as repository secrets. package.mjs auto-detects their presence.
+  desktop-macos:
+    needs: verify
+    if: github.repository == 'shivasymbl/forge'
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build desktop TypeScript
+        run: pnpm --filter @multica/desktop build
+
+      - name: Package macOS DMG (arm64)
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: node scripts/package.mjs --mac --arm64 --publish always

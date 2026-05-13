@@ -2,12 +2,12 @@
 project_id: SPEC-2026-05-13-001
 project_name: "Forge: Slack Notifications + Archive Relabel + Tab Rebrand"
 slug: forge-slack-archive-rebrand
-status: approved
+status: completed
 created: 2026-05-13T21:50:00+05:30
 approved: 2026-05-13T23:57:00+05:30
 approved_by: "shivasymbl <sdevinarayanan@asymbl.com>"
-started: null
-completed: null
+started: 2026-05-14T00:05:00+05:30
+completed: 2026-05-14T02:05:00+05:30
 expires: 2026-08-13T21:50:00+05:30
 superseded_by: null
 tags: [slack, integrations, notifications, branding, rbac, fork]

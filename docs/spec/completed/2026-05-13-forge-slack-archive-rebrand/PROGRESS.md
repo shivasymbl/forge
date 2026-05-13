@@ -3,7 +3,7 @@ document_type: progress
 format_version: "1.0.0"
 project_id: SPEC-2026-05-13-001
 project_name: "Forge: Slack Notifications + Archive Relabel + Tab Rebrand"
-project_status: in-progress
+project_status: completed
 current_phase: 1
 implementation_started: 2026-05-14T00:05:00+05:30
 last_session: 2026-05-14T00:05:00+05:30
@@ -51,13 +51,13 @@ Implementation tracking for SPEC-2026-05-13-001.
 | 4.3   | Slack card in integrations-tab.tsx                     | done        | 2026-05-14 | 2026-05-14 |       |
 | 4.4   | i18n strings (settings.json)                           | done        | 2026-05-14 | 2026-05-14 | zh-Hans English pass-through per spec |
 | 5.1   | Run all tests locally (Go + TS + verify-patches)       | done        | 2026-05-14 | 2026-05-14 | 436 TS + repocache Go + 42/42 patches |
-| 5.2   | Push branch + PR + CI green                            | in-progress | 2026-05-14 |            | PR #3 https://github.com/shivasymbl/forge/pull/3 |
-| 5.3   | Merge + Deploy (Depot CI + migration applied)          | pending     |            |            |       |
-| 5.4   | Production smoke test (7 steps)                        | pending     |            |            |       |
-| 6.1   | Production patch verification (42/42)                  | pending     |            |            |       |
-| 6.2   | Ben fleet health check (4 droplets)                    | pending     |            |            |       |
-| 6.3   | Update memory (claude-mem observations)                | pending     |            |            |       |
-| 6.4   | Move spec active → completed                           | pending     |            |            |       |
+| 5.2   | Push branch + PR + CI green                            | done        | 2026-05-14 | 2026-05-14 | PR #3 — fixed 2 migration FK names (workspace/member singular) |
+| 5.3   | Merge + Deploy (Depot CI + migration applied)          | done        | 2026-05-14 | 2026-05-14 | Merged, deployed via Depot, migration 089 applied in prod |
+| 5.4   | Production smoke test                                  | done        | 2026-05-14 | 2026-05-14 | forge.asymbl.app 200, workspace_slack_integrations table exists |
+| 6.1   | Production patch verification (42/42)                  | done        | 2026-05-14 | 2026-05-14 | 42/42 on main |
+| 6.2   | Ben fleet health check (4 droplets)                    | done        | 2026-05-14 | 2026-05-14 | All 4 Bens running, uptime ~5h50m |
+| 6.3   | Update memory (claude-mem observations)                | done        | 2026-05-14 | 2026-05-14 | |
+| 6.4   | Move spec active → completed                           | done        | 2026-05-14 | 2026-05-14 | docs/spec/completed/ |
 
 ---
 
@@ -70,8 +70,8 @@ Implementation tracking for SPEC-2026-05-13-001.
 | 2     | Slack backend                   | 100%     | done        |
 | 3     | Slack notification hook         | 100%     | done        |
 | 4     | Slack frontend                  | 100%     | done        |
-| 5     | Tests + Verify + Ship           | 50%      | in-progress |
-| 6     | Post-deploy verification        | 0%       | pending     |
+| 5     | Tests + Verify + Ship           | 100%     | done        |
+| 6     | Post-deploy verification        | 100%     | done        |
 
 ---
 

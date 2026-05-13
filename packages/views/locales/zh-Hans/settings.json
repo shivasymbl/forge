@@ -169,7 +169,20 @@
     "not_configured_and": "和",
     "manage_hint": "只有管理员和所有者可以管理集成。",
     "toast_not_configured": "当前部署未配置 GitHub 集成",
-    "toast_open_failed": "打开 GitHub 安装页失败"
+    "toast_open_failed": "打开 GitHub 安装页失败",
+    "slack_title": "Slack",
+    "slack_description": "Post to a Slack channel when issue status changes.",
+    "slack_webhook_label": "Webhook URL",
+    "slack_webhook_placeholder": "https://hooks.slack.com/services/...",
+    "slack_triggers_label": "Notify when status changes to:",
+    "slack_triggers_any": "Any status",
+    "slack_test_button": "Send test",
+    "slack_save_button": "Save",
+    "slack_delete_button": "Disconnect",
+    "slack_toast_test_success": "Test message sent to Slack",
+    "slack_toast_test_failed": "Test failed — check the webhook URL",
+    "slack_toast_saved": "Slack integration saved",
+    "slack_toast_deleted": "Slack integration removed"
   },
   "repositories": {
     "section_title": "代码仓库",

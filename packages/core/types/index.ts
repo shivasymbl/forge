@@ -84,6 +84,12 @@ export type {
   GitHubConnectResponse,
 } from "./github";
 export type {
+  SlackIntegration,
+  SlackIntegrationResponse,
+  PutSlackIntegrationBody,
+  TestSlackIntegrationResponse,
+} from "./slack";
+export type {
   Autopilot,
   AutopilotStatus,
   AutopilotExecutionMode,

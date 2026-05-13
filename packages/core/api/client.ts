@@ -93,6 +93,9 @@ import type {
   GitHubConnectResponse,
   Squad,
   SquadMember,
+  SlackIntegrationResponse,
+  PutSlackIntegrationBody,
+  TestSlackIntegrationResponse,
 } from "../types";
 import type { OnboardingCompletionPath } from "../onboarding/types";
 import { type Logger, noopLogger } from "../logger";
@@ -1557,5 +1560,32 @@ export class ApiClient {
 
   async listIssuePullRequests(issueId: string): Promise<{ pull_requests: GitHubPullRequest[] }> {
     return this.fetch(`/api/issues/${issueId}/pull-requests`);
+  }
+
+  // Slack integration
+  async getSlackIntegration(workspaceId: string): Promise<SlackIntegrationResponse> {
+    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`);
+  }
+
+  async putSlackIntegration(
+    workspaceId: string,
+    body: PutSlackIntegrationBody
+  ): Promise<SlackIntegrationResponse> {
+    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  }
+
+  async deleteSlackIntegration(workspaceId: string): Promise<void> {
+    await this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`, {
+      method: "DELETE",
+    });
+  }
+
+  async testSlackIntegration(workspaceId: string): Promise<TestSlackIntegrationResponse> {
+    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack/test`, {
+      method: "POST",
+    });
   }
 }

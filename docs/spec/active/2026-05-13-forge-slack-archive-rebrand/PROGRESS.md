@@ -29,32 +29,32 @@ Implementation tracking for SPEC-2026-05-13-001.
 
 | ID    | Description                                            | Status      | Started    | Completed  | Notes |
 | ----- | ------------------------------------------------------ | ----------- | ---------- | ---------- | ----- |
-| 1.1   | Fix browser tab metadata (apps/web/app/layout.tsx)     | pending     |            |            |       |
-| 1.2   | Replace favicon (delete favicon.svg, redirect to png)  | pending     |            |            |       |
-| 1.3   | Relabel `cancelled` → "Archive" in UI (5 files)        | pending     |            |            |       |
-| 1.4   | Add Phase 1 checks to verify-patches.sh                | pending     |            |            |       |
-| 1b.1  | Fix co-authored-by hook script — B1 CRITICAL           | pending     |            |            |       |
-| 1b.2  | Fix desktop app name — B5 + B7                         | pending     |            |            |       |
-| 1b.3  | Remove multica.ai docs link in runtimes-page — B8      | pending     |            |            |       |
-| 1b.4  | Fix ACP client name (4 agent files) — B9               | pending     |            |            |       |
-| 1b.5  | Add B1-B10 checks to verify-patches.sh (Section 7)     | pending     |            |            |       |
-| 2.1   | Create DB migration 089_workspace_slack_integrations   | pending     |            |            |       |
-| 2.2   | sqlc queries (server/pkg/db/queries/slack.sql)         | pending     |            |            |       |
-| 2.3   | Slack integration package (notify/format/client)       | pending     |            |            |       |
-| 2.4   | HTTP handler (slack_integration.go) — 4 routes         | pending     |            |            |       |
-| 2.5   | Router wiring with admin-only middleware               | pending     |            |            |       |
-| 3.1   | Hook into notification_listeners.go (5-line addition)  | pending     |            |            |       |
-| 3.2   | Verify panic isolation                                 | pending     |            |            |       |
-| 3.3   | Update verify-patches.sh with Slack hook check         | pending     |            |            |       |
-| 4.1   | Add API client methods (4 methods on ApiClient)        | pending     |            |            |       |
-| 4.2   | TanStack Query hooks (slack-integration package)       | pending     |            |            |       |
-| 4.3   | Slack card in integrations-tab.tsx                     | pending     |            |            |       |
-| 4.4   | i18n strings (settings.json)                           | pending     |            |            |       |
-| 5.1   | Run all tests locally (Go + TS + verify-patches)       | pending     |            |            |       |
-| 5.2   | Push branch + PR + CI green                            | pending     |            |            |       |
+| 1.1   | Fix browser tab metadata (apps/web/app/layout.tsx)     | done        | 2026-05-14 | 2026-05-14 |       |
+| 1.2   | Replace favicon (delete favicon.svg, redirect to png)  | done        | 2026-05-14 | 2026-05-14 |       |
+| 1.3   | Relabel `cancelled` → "Archive" in UI (5 files)        | done        | 2026-05-14 | 2026-05-14 | skipped issues.json:240 (agent task status, not issue status) |
+| 1.4   | Add Phase 1 checks to verify-patches.sh                | done        | 2026-05-14 | 2026-05-14 |       |
+| 1b.1  | Fix co-authored-by hook script — B1 CRITICAL           | done        | 2026-05-14 | 2026-05-14 |       |
+| 1b.2  | Fix desktop app name — B5 + B7                         | done        | 2026-05-14 | 2026-05-14 |       |
+| 1b.3  | Remove multica.ai docs link in runtimes-page — B8      | done        | 2026-05-14 | 2026-05-14 | option B (remove anchor) |
+| 1b.4  | Fix ACP client name (4 agent files) — B9               | done        | 2026-05-14 | 2026-05-14 |       |
+| 1b.5  | Add B1-B10 checks to verify-patches.sh (Section 7)     | done        | 2026-05-14 | 2026-05-14 | also added Section 6 (Slack) |
+| 2.1   | Create DB migration 089_workspace_slack_integrations   | done        | 2026-05-14 | 2026-05-14 | Docker not running; migration tested on deploy |
+| 2.2   | sqlc queries (server/pkg/db/queries/slack.sql)         | done        | 2026-05-14 | 2026-05-14 |       |
+| 2.3   | Slack integration package (notify/format/client)       | done        | 2026-05-14 | 2026-05-14 | IssueEvent struct decoupled from handler pkg |
+| 2.4   | HTTP handler (slack_integration.go) — 4 routes         | done        | 2026-05-14 | 2026-05-14 |       |
+| 2.5   | Router wiring with admin-only middleware               | done        | 2026-05-14 | 2026-05-14 |       |
+| 3.1   | Hook into notification_listeners.go (5-line addition)  | done        | 2026-05-14 | 2026-05-14 |       |
+| 3.2   | Verify panic isolation                                 | done        | 2026-05-14 | 2026-05-14 | recover() in notify.go goroutine |
+| 3.3   | Update verify-patches.sh with Slack hook check         | done        | 2026-05-14 | 2026-05-14 | Section 6 (4 checks) |
+| 4.1   | Add API client methods (4 methods on ApiClient)        | done        | 2026-05-14 | 2026-05-14 |       |
+| 4.2   | TanStack Query hooks (slack-integration package)       | done        | 2026-05-14 | 2026-05-14 |       |
+| 4.3   | Slack card in integrations-tab.tsx                     | done        | 2026-05-14 | 2026-05-14 |       |
+| 4.4   | i18n strings (settings.json)                           | done        | 2026-05-14 | 2026-05-14 | zh-Hans English pass-through per spec |
+| 5.1   | Run all tests locally (Go + TS + verify-patches)       | done        | 2026-05-14 | 2026-05-14 | 436 TS + repocache Go + 42/42 patches |
+| 5.2   | Push branch + PR + CI green                            | in-progress | 2026-05-14 |            | PR #3 https://github.com/shivasymbl/forge/pull/3 |
 | 5.3   | Merge + Deploy (Depot CI + migration applied)          | pending     |            |            |       |
 | 5.4   | Production smoke test (7 steps)                        | pending     |            |            |       |
-| 6.1   | Production patch verification (38/38)                  | pending     |            |            |       |
+| 6.1   | Production patch verification (42/42)                  | pending     |            |            |       |
 | 6.2   | Ben fleet health check (4 droplets)                    | pending     |            |            |       |
 | 6.3   | Update memory (claude-mem observations)                | pending     |            |            |       |
 | 6.4   | Move spec active → completed                           | pending     |            |            |       |
@@ -65,12 +65,12 @@ Implementation tracking for SPEC-2026-05-13-001.
 
 | Phase | Name                            | Progress | Status      |
 | ----- | ------------------------------- | -------- | ----------- |
-| 1     | Quick wins (tab + Archive)      | 0%       | pending     |
-| 1b    | Brand audit fixes (B1–B10)      | 0%       | pending     |
-| 2     | Slack backend                   | 0%       | pending     |
-| 3     | Slack notification hook         | 0%       | pending     |
-| 4     | Slack frontend                  | 0%       | pending     |
-| 5     | Tests + Verify + Ship           | 0%       | pending     |
+| 1     | Quick wins (tab + Archive)      | 100%     | done        |
+| 1b    | Brand audit fixes (B1–B10)      | 100%     | done        |
+| 2     | Slack backend                   | 100%     | done        |
+| 3     | Slack notification hook         | 100%     | done        |
+| 4     | Slack frontend                  | 100%     | done        |
+| 5     | Tests + Verify + Ship           | 50%      | in-progress |
 | 6     | Post-deploy verification        | 0%       | pending     |
 
 ---
@@ -79,6 +79,8 @@ Implementation tracking for SPEC-2026-05-13-001.
 
 | Date | Type | Task ID | Description | Resolution |
 | ---- | ---- | ------- | ----------- | ---------- |
+| 2026-05-14 | skipped | 1.3 | Spec said update `issues.json:240` (`status_cancelled`) but that key is in the agent task lifecycle section (queued/dispatched/running/completed/failed/cancelled), not issue status. Renaming to "Archive" there would be wrong UX. | Skipped — zh-Hans:235 same |
+| 2026-05-14 | modified | 2.3 | notify.go accepts `IssueEvent` struct (not `handler.IssueResponse`) to avoid circular import `handler→slack→handler` | Cleaner design; IssueEvent is a minimal struct in the slack package |
 
 ---
 

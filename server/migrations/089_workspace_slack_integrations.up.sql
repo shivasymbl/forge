@@ -1,6 +1,6 @@
 CREATE TABLE workspace_slack_integrations (
     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    workspace_id    UUID        NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    workspace_id    UUID        NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
     enabled         BOOLEAN     NOT NULL DEFAULT true,
     webhook_url     TEXT        NOT NULL,
     label           TEXT        NOT NULL DEFAULT '',

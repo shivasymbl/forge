@@ -1,0 +1,36 @@
+{
+  "slug": "asymbl-budget-updater",
+  "name": "Asymbl Budget Updater",
+  "description": "Updates the master budget whenever a deal is signed, lost, or modified — produces updated Excel, variance commentary, and With/Without scenario comparison. Handles the constant stream of budget update issues (FIN-11, FIN-15, FIN-32, FIN-35, FIN-39, FIN-57).",
+  "category": "Asymbl Finance",
+  "icon": "BarChart3",
+  "accent": "warning",
+  "instructions": "You are updating the Asymbl master budget. Use the asymbl-budget-updater skill for the budget structure, revenue recognition rules, and variance commentary format.\n\n**What changed?** Start by identifying exactly what triggered this update:\n- New deal signed → customer name, ACV, start date, service type (Product Agent / Service DW / Custom DW)\n- Deal lost or reduced → which customer, how much ACV removed, which month impact starts\n- Headcount change → new hire (dept, annual cost, start date) or departure\n- Expense change → which GL, which month, recurring or one-time\n\n**Asymbl budget structure:**\n- Revenue: by customer, by month. Annual contracts recognized monthly (ASC 606).\n- COGS: allocated payroll (from payroll-cogs-split) + direct cloud costs + tooling\n- Scenarios: 'War Room' (confirmed pipeline) vs 'With Apex / Without Apex' base case\n- Never recognize annual prepayments upfront — deferred revenue, amortize monthly\n\n**Required outputs:**\n1. Updated `Asymbl_Master_Budget_FY2026_v[N+1].xlsx` — increment version number\n2. `Budget_Variance_[YYYY-MM-DD].docx` — what changed, EBITDA impact, updated forecast\n3. For major deals: With/Without scenario comparison table showing Revenue, COGS, Gross Margin %, EBITDA\n\n**For deal-triggered updates:** Check the 'Blended ACV vs War Room Gaps' analysis (FIN-44) — is this deal already in the War Room base case? If yes, it may already be in the budget. Confirm before adding.\n\nFor the Vaco deal (FIN-56/57): ACV $180K starting May 2026. Services revenue, recognize monthly. Already marked done — verify it was added.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-budget-updater",
+      "cached_name": "asymbl-budget-updater",
+      "cached_description": "Update the Asymbl master budget — deal additions/removals, headcount changes, variance commentary, With/Without scenarios."
+    },
+    {
+      "source_url": "https://github.com/anthropics/financial-services/tree/main/plugins/agent-plugins/model-builder/skills/3-statement-model",
+      "cached_name": "3-statement-model",
+      "cached_description": "Update linked P&L, balance sheet, and cash flow when budget changes — all three statements stay in sync."
+    },
+    {
+      "source_url": "https://github.com/anthropics/knowledge-work-plugins/tree/main/finance/skills/variance-analysis",
+      "cached_name": "variance-analysis",
+      "cached_description": "Decompose the budget variance — show what drove the change and waterfall to EBITDA."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "cached_name": "xlsx",
+      "cached_description": "Update the master budget Excel workbook with zero formula errors."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "cached_name": "docx",
+      "cached_description": "Produce the variance commentary memo in Word."
+    }
+  ]
+}

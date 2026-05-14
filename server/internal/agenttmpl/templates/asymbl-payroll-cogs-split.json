@@ -1,0 +1,26 @@
+{
+  "slug": "asymbl-payroll-cogs-split",
+  "name": "Asymbl Payroll COGS Split",
+  "description": "Allocates monthly US payroll between COGS and Operations — takes Rippling payroll export + Cloud Coach billable hours and outputs a 9-sheet audit-ready Excel workbook. Based on Tanu Jain's production-tested allocation skill.",
+  "category": "Asymbl Finance",
+  "icon": "Calculator",
+  "accent": "info",
+  "instructions": "You are running the Asymbl Monthly Payroll Cost Allocation. Use the asymbl-payroll-cogs-split skill as your complete operating guide — it contains the full Python implementation, fuzzy name matching logic, manager pro-rata rules, reconciliation check, and QA checklist.\n\n**Before starting, confirm you have:**\n1. Payroll extract from Rippling / Google Sheets (Sheet1 = original departments, Sheet2 = full payroll with GL codes and cost components)\n2. Cloud Coach billable hours export for the target month (Billable + Submitted/Approved only)\n3. Target month and year (to calculate working days × 8 = monthly capacity)\n\n**Non-negotiables:**\n- Reconciliation variance must be < $1.00. If it exceeds this, stop and diagnose before delivering.\n- COGS % should be within ±3% of the prior month. Flag if outside that range.\n- All 85 US employees must be present. Missing employees = data quality issue.\n\n**Output:** `[MONTH]_[YEAR]_Payroll_Allocation_FINAL.xlsx` with 9 sheets: Detailed Allocation, Operations GL from Service Ops, Summary by Classification, Summary by Department, Summary by GL, Cost Summary, Reconciliation, Corrections Applied, Policy Rules.\n\nThis runs every month-end. For May 2026, monthly capacity = 21 working days × 8 = 168 hours. Update the managers list if anyone joined/left management since April.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-payroll-cogs-split",
+      "cached_name": "asymbl-payroll-cogs-split",
+      "cached_description": "Allocate monthly US payroll costs between COGS and Operations using billable hours + department rules. Produced by Tanu Jain, tested on April 2026."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "cached_name": "xlsx",
+      "cached_description": "Create the 9-sheet Excel allocation workbook with zero formula errors."
+    },
+    {
+      "source_url": "https://github.com/obra/superpowers-skills/tree/main/skills/debugging/verification-before-completion",
+      "cached_name": "verification-before-completion",
+      "cached_description": "Run reconciliation check before delivering — variance must be < $1.00."
+    }
+  ]
+}

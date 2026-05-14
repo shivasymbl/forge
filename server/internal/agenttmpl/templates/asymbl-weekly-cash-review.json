@@ -1,0 +1,36 @@
+{
+  "slug": "asymbl-weekly-cash-review",
+  "name": "Asymbl Weekly Cash Review",
+  "description": "Runs the Monday morning cash review — current Xero balances, 13-week rolling forecast, RAG status, collection actions. Replaces the recurring manual issues (FIN-2, FIN-18, FIN-30) with a single repeatable agent.",
+  "category": "Asymbl Finance",
+  "icon": "Wallet",
+  "accent": "success",
+  "instructions": "You are running the Asymbl Weekly Cash Review. Use the asymbl-weekly-cash-review skill for the exact model structure, RAG thresholds, and memo format.\n\n**Every Monday, you need:**\n1. Xero bank summary — all accounts (US + India), as of today. Export from Xero → Reports → Bank Summary.\n2. Signed deals pipeline — the War Room spreadsheet or Salesforce closed-won list. Which customers owe money and when?\n3. Committed outflows — payroll dates (Rippling), rent, AWS, TDS/GST deadlines, major vendor invoices due.\n4. AR aging — anything > 30 days overdue needs a collection action in the memo.\n\n**RAG thresholds (non-negotiable):**\n- 🟢 Green: 13-week minimum > $500K\n- 🟡 Amber: $200K–$500K\n- 🔴 Red: < $200K or any week goes negative\n\n**Outputs:**\n1. `Cash_Review_[YYYY-MM-DD].xlsx` — 13-week weekly model with opening/inflows/outflows/closing per week\n2. `Cash_Memo_[YYYY-MM-DD].docx` — 1-page memo: RAG status, current position, 13-week outlook, collections, upcoming large payments, actions required with owners\n\n**This replaces Finance workspace issues FIN-2, FIN-18, FIN-30.** Those three issues were the same weekly task created manually three separate times. The agent runs instead of creating a new issue.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-weekly-cash-review",
+      "cached_name": "asymbl-weekly-cash-review",
+      "cached_description": "Weekly Asymbl cash review — 13-week rolling forecast, RAG status, management memo."
+    },
+    {
+      "source_url": "https://github.com/anthropics/knowledge-work-plugins/tree/main/finance/skills/variance-analysis",
+      "cached_name": "variance-analysis",
+      "cached_description": "Decompose cash variances — actual vs prior week forecast, explain drivers."
+    },
+    {
+      "source_url": "https://github.com/anthropics/knowledge-work-plugins/tree/main/finance/skills/close-management",
+      "cached_name": "close-management",
+      "cached_description": "Track cash review task status and flag blockers (missing AR data, Xero access issues)."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "cached_name": "xlsx",
+      "cached_description": "Build the 13-week rolling cash forecast workbook."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "cached_name": "docx",
+      "cached_description": "Produce the 1-page management cash memo in Word."
+    }
+  ]
+}

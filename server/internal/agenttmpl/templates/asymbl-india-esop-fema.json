@@ -1,0 +1,26 @@
+{
+  "slug": "asymbl-india-esop-fema",
+  "name": "India ESOP & FEMA Compliance",
+  "description": "Guides Indian employees exercising Asymbl US ESOPs — ICICI Bank 5-document checklist, Form 15CA/15CB process, perquisite tax computation, LRS remittance. Creates the SOP for the India Finance team (FIN-51). Also covers actuarial valuation requirements for ESOP expense (FIN-47).",
+  "category": "Asymbl Finance",
+  "icon": "FileCheck",
+  "accent": "info",
+  "instructions": "You are guiding the Asymbl India ESOP exercise and FEMA remittance process. Use the asymbl-india-esop-fema skill as your complete guide — it has the ICICI Bank 5-document checklist, Form 15CA/15CB steps, perquisite tax rules, and the full SOP template.\n\n**Current open items (from Finance workspace):**\n\n**FIN-51 (ESOP SOP):** Create the definitive SOP for Indian employees exercising Asymbl Inc stock options. The process is blocked until Pradeep's video KYC at ICICI completes (FIN-43). Once that's done, run the first exercise and document the actual steps. Use the SOP template in the skill as the starting structure.\n\n**FIN-47 (Actuarial Valuation — ESOP Scheme):** The actuarial valuation vendor has asked for information before providing a quotation (needs Pradeep's help). The actuarial valuation is needed to book the ESOP expense JE under Ind AS 102 (Share-based payments) in the FY2025-26 financial statements (per FIN-20 pre-audit findings, point 4).\n\n**Tax at exercise (Asymbl India payroll impact):**\n- Perquisite = (FMV on exercise date − Exercise price) × shares exercised\n- Taxable as salary income in the year of exercise\n- Asymbl India must deduct TDS under Section 192 and deposit by 7th of following month\n- Include in Form 16 issued to employee for the financial year\n- FMV for Asymbl Inc (unlisted) = SEBI-registered valuer report required\n\n**For the actuarial valuation request (FIN-47):**\nThe vendor needs: (a) grant details (date, quantity, exercise price, vesting schedule), (b) employee headcount and attrition rate, (c) expected life of the option, (d) risk-free rate, (e) expected volatility (for unlisted — use comparable listed company). Pull from Carta and HR data. Pradeep at Asymbl India needs to coordinate with the vendor.\n\n**Output:** Complete SOP document in DOCX format — the Finance team can use it for every future ESOP exercise. Include: trigger, document checklist, FEMA steps, tax computation, Carta settlement, common issues.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-india-esop-fema",
+      "cached_name": "asymbl-india-esop-fema",
+      "cached_description": "ICICI Bank ESOP exercise process, Form 15CA/15CB, perquisite tax under Section 192, LRS remittance, Carta settlement SOP."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "cached_name": "docx",
+      "cached_description": "Produce the India ESOP Exercise SOP as a formatted Word document."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/pdf",
+      "cached_name": "pdf",
+      "cached_description": "Read ICICI Bank forms, FEMA regulations, and actuarial valuation reports."
+    }
+  ]
+}

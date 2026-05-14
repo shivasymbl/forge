@@ -1,0 +1,36 @@
+{
+  "slug": "asymbl-india-fy-close",
+  "name": "India FY Close — Asymbl",
+  "description": "Completes the Asymbl India FY2025-26 statutory audit close — sequences the 7 pre-audit adjustments from FIN-20, computes ESOP/gratuity/leave JEs, prepares deferred tax, and produces audit-ready IndAS financial statements.",
+  "category": "Asymbl Finance",
+  "icon": "ClipboardCheck",
+  "accent": "primary",
+  "instructions": "You are completing the Asymbl India FY2025-26 audit close. Use the asymbl-india-fy-close-adjustments skill — it has IndAS 12 deferred tax calculations, IndAS 102 ESOP graded vesting JEs, IndAS 19 gratuity/leave methodology, Section 197 director remuneration rules, and the full close checklist.\n\n**Pre-audit findings from FIN-20 (7 open items):**\n\n**Item 1 (DONE per update):** Advanced tax → income tax expense transfer. Transfer all advance tax paid (FY2025-26) to 'Income Tax Expense' from 'Advance Tax Asset'. Credit advance tax liability accounts. Done in Xero per FIN-20 update.\n\n**Item 2 (DONE per update):** Director's salary + bonus → 'Director's Remuneration' account. Reclassification from Ops Wages/Bonus. Done.\n\n**Item 3 (OPEN):** Deferred tax expense. Compute Ind AS 12 deferred tax:\n- Temp differences: PP&E (depreciation timing), gratuity/leave/ESOP provisions (tax = deduction basis vs IndAS = accrual). Use 25.168% effective rate for Asymbl India.\n- Get the actuarial valuation numbers first (Items 4+5) — DTA on ESOP/gratuity depends on those amounts.\n- Discuss with Mudit (auditor) before posting — Pradeep to contact Mudit.\n\n**Item 4 (OPEN — waiting actuarial):** ESOP scheme expense JE under Ind AS 102.\n- Need actuarial valuation (FIN-47 — vendor asked for information, waiting on Pradeep)\n- Once valuation arrives: Grant-date fair value × vested proportion × cost for each tranche\n- JE: Dr. Employee Benefit Expense (COGS or Opex per function) / Cr. Share-Based Payment Reserve (Equity)\n- Deferred tax: DTA = expense × 25.168% (timing difference, deductible when options exercised)\n\n**Item 5 (OPEN — waiting actuarial):** Gratuity + Leave Encashment JE under Ind AS 19.\n- Gratuity: PUC method, discount rate = G-Sec yield at reporting date. JE: Dr. Gratuity Expense / Cr. Gratuity Liability. Remeasurements (actuarial gains/losses) → OCI, not P&L.\n- Leave encashment (OLTB): Remeasurements → P&L (not OCI like gratuity). Section 43B: only deductible when paid, not accrued — create DTA.\n- Both are unfunded at Asymbl India (no Gratuity Trust) → liability on balance sheet.\n\n**Item 6 (OPEN — discuss with Pradeep):** Professional fees accrual: ₹60,000/month accrued. Verify: is this for a recurring engagement that started mid-year? Any over/under accrual? Any prepaid component? Get Pradeep to confirm the service period.\n\n**Item 7 (OPEN):** Statutory audit fees accrual. Reclassify from 'Professional Fees Provision' to a dedicated 'Audit Fees Payable' account. Amount: get quote from Mudit for FY2025-26 audit fee. JE: Dr. Audit Fees Expense / Cr. Audit Fees Payable.\n\n**Sequence:** Do Items 1+2 (done) → Item 6+7 (quick) → Get actuals for 4+5 → Run deferred tax (Item 3) last, after all provisions are booked.\n\n**Output:** All 7 JEs posted in Xero + Ind AS financial statements (P&L, Balance Sheet, Cash Flow, Notes) in DOCX format ready for auditor review.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-india-fy-close-adjustments",
+      "cached_name": "asymbl-india-fy-close-adjustments",
+      "cached_description": "Ind AS 12 deferred tax, Ind AS 102 ESOP graded vesting JEs, Ind AS 19 gratuity/leave, director remuneration Section 197, professional fees cutoff, FY close checklist."
+    },
+    {
+      "source_url": "https://github.com/anthropics/knowledge-work-plugins/tree/main/finance/skills/journal-entry",
+      "cached_name": "journal-entry",
+      "cached_description": "Prepare each closing JE with proper debits, credits, supporting detail, and audit documentation."
+    },
+    {
+      "source_url": "https://github.com/anthropics/knowledge-work-plugins/tree/main/finance/skills/financial-statements",
+      "cached_name": "financial-statements",
+      "cached_description": "Generate IndAS P&L, Balance Sheet, and Cash Flow with period-over-period comparison for FY2025-26."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "cached_name": "xlsx",
+      "cached_description": "Build the deferred tax computation workbook with all temporary differences."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "cached_name": "docx",
+      "cached_description": "Produce audit-ready IndAS financial statements with notes in Word format."
+    }
+  ]
+}

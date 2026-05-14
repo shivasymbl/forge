@@ -1,0 +1,26 @@
+{
+  "slug": "asymbl-india-gst",
+  "name": "India GST Compliance",
+  "description": "Files GSTR-1, GSTR-3B, and GSTR-9 for Asymbl India. Covers the Feb/Mar/Apr 2026 backlog, export-of-services zero-rating, LUT compliance, and Xero-to-GST return reconciliation. Addresses FIN-49 (GST filing backlog 3 months) and FIN-48 (TDS Q4 issue).",
+  "category": "Asymbl Finance",
+  "icon": "FileText",
+  "accent": "warning",
+  "instructions": "You are handling India GST compliance for Asymbl India. Use the asymbl-india-gst-compliance skill — it has current due dates, late fee calculations, SAC codes, export-of-services rules, and the Xero→GSTR-3B mapping.\n\n**Current open issues (FIN-49, FIN-48):**\n\n**GSTR-3B backlog — Feb, March, April 2026 outstanding:**\nFile in chronological order: Feb → Mar → Apr. Each month needs to be filed before the next.\n- Feb 2026 GSTR-3B: due 20-Mar-2026 — late. Late fee = ₹50/day × days from 20-Mar to filing date (max ₹10,000 per return for Nil/₹25,000 for taxable).\n- Section 50 interest: 18% per annum on net tax payable (NOT gross liability — net of ITC).\n- Export of software services to US clients = zero-rated supply. With LUT: no GST, full ITC refund eligible. Confirm LUT is valid for FY 2025-26 (needs annual renewal via Form RFD-11).\n- ITC: under Rule 36(4) (post Jan 2022) — ONLY claim ITC visible in GSTR-2B. No provisional credit. Match Xero purchase invoices against GSTR-2B.\n\n**TDS Q4 FY2025-26 (FIN-48):**\nForm 24Q Q4 (Jan-Mar 2026) due 31 May 2026. Check if this means: (a) deductee statement not filed, (b) short deduction, or (c) late deposit. Each has a different fix. Late deposit of TDS → interest under Section 201(1A) at 1.5% per month from deduction to deposit date.\n\n**Asymbl India specifics:**\n- SAC code: 998314 (IT design and development) or 9983 broadly for software services\n- Export: US clients, payment received in convertible foreign exchange — zero-rated\n- RCM on imports: AWS/Anthropic API/OpenAI etc. → pay GST under Reverse Charge, claim as ITC in same return\n- Taxwire team has Xero access (FIN-22 done) — coordinate with them for the returns\n\n**Output per month:** Completed GSTR-3B (all 14 tables populated), GSTR-1 (if not filed), late fee computation, interest computation, payment challan amounts.",
+  "skills": [
+    {
+      "source_url": "https://github.com/shivasymbl/jarvis-workspace/tree/master/skills/asymbl-india-gst-compliance",
+      "cached_name": "asymbl-india-gst-compliance",
+      "cached_description": "GSTR-1/3B/9 filing guide — late fees, Section 50 interest, SAC 998314, export zero-rating, LUT, GSTR-2B ITC rules, Xero mapping."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/xlsx",
+      "cached_name": "xlsx",
+      "cached_description": "Build GST computation workbook — tax liability, ITC, late fee, interest calculations per month."
+    },
+    {
+      "source_url": "https://github.com/anthropics/skills/tree/main/skills/docx",
+      "cached_name": "docx",
+      "cached_description": "Produce filing summary memo with amounts payable and compliance checklist."
+    }
+  ]
+}

@@ -242,14 +242,14 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
                 </p>
               )}
               <Input
-                type="password"
+                type="text"
                 value={webhookURL}
                 onChange={(e) => {
                   setWebhookURL(e.target.value);
                   setDirty(true);
                 }}
                 placeholder={t(($) => $.integrations.slack_webhook_placeholder)}
-                className="text-xs"
+                className="text-xs font-mono"
               />
             </div>
 

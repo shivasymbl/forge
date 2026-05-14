@@ -1562,29 +1562,29 @@ export class ApiClient {
     return this.fetch(`/api/issues/${issueId}/pull-requests`);
   }
 
-  // Slack integration
-  async getSlackIntegration(workspaceId: string): Promise<SlackIntegrationResponse> {
-    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`);
+  // Slack integration (workspace scoped via X-Workspace-ID header, not URL path)
+  async getSlackIntegration(_workspaceId: string): Promise<SlackIntegrationResponse> {
+    return this.fetch("/api/integrations/slack");
   }
 
   async putSlackIntegration(
-    workspaceId: string,
+    _workspaceId: string,
     body: PutSlackIntegrationBody
   ): Promise<SlackIntegrationResponse> {
-    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`, {
+    return this.fetch("/api/integrations/slack", {
       method: "PUT",
       body: JSON.stringify(body),
     });
   }
 
-  async deleteSlackIntegration(workspaceId: string): Promise<void> {
-    await this.fetch(`/api/workspaces/${workspaceId}/integrations/slack`, {
+  async deleteSlackIntegration(_workspaceId: string): Promise<void> {
+    await this.fetch("/api/integrations/slack", {
       method: "DELETE",
     });
   }
 
-  async testSlackIntegration(workspaceId: string): Promise<TestSlackIntegrationResponse> {
-    return this.fetch(`/api/workspaces/${workspaceId}/integrations/slack/test`, {
+  async testSlackIntegration(_workspaceId: string): Promise<TestSlackIntegrationResponse> {
+    return this.fetch("/api/integrations/slack/test", {
       method: "POST",
     });
   }

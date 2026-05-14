@@ -187,6 +187,89 @@ check "7.9 web layout has no multica_hq twitter handle" \
 
 echo ""
 
+# ── 8. Slack Integration ──────────────────────────────────────────────────────
+echo "[ 8 ] Slack Integration"
+
+check "8.1 Slack migration 089 exists" \
+  "ls server/migrations/089_workspace_slack_integrations.up.sql > /dev/null 2>&1"
+
+check "8.2 Slack migration 090 FK fix exists (created_by → user not member)" \
+  "ls server/migrations/090_slack_created_by_fk_fix.up.sql > /dev/null 2>&1"
+
+check "8.3 Slack integration package exists" \
+  "test -f server/internal/integrations/slack/notify.go"
+
+check "8.4 Slack SSRF guard uses parsed URL validation not raw string prefix" \
+  "grep -q 'ValidateWebhookURL' server/internal/integrations/slack/client.go && \
+   grep -q 'url.Parse' server/internal/integrations/slack/client.go"
+
+check "8.5 Slack DeleteSlackIntegration is soft-delete (DisableSlackIntegration)" \
+  "grep -q 'DisableSlackIntegration' server/internal/handler/slack_integration.go"
+
+check "8.6 Slack hook wired in notification_listeners (NotifyStatusChange)" \
+  "grep -q 'slack.NotifyStatusChange' server/cmd/server/notification_listeners.go"
+
+check "8.7 Slack routes have admin RBAC gate" \
+  "grep -q 'integrations/slack' server/cmd/server/router.go && \
+   grep -q 'RequireWorkspaceRole' server/cmd/server/router.go"
+
+check "8.8 Slack TestSlackIntegration uses detached context for DB writes" \
+  "grep -q 'context.Background.*3.*Second\|statusCtx' server/internal/handler/slack_integration.go"
+
+check "8.9 Slack useTestSlackIntegration invalidates query on success" \
+  "grep -q 'onSuccess' packages/core/slack-integration/mutations.ts"
+
+check "8.10 Slack history returned in GET response (soft-delete audit trail)" \
+  "grep -q 'ListSlackIntegrationHistoryForWorkspace\|history' server/internal/handler/slack_integration.go"
+
+echo ""
+
+# ── 9. Agent Templates ────────────────────────────────────────────────────────
+echo "[ 9 ] Agent Templates"
+
+check "9.1 Template registry has at least 26 templates" \
+  "ls server/internal/agenttmpl/templates/*.json | wc -l | xargs -I{} test {} -ge 26"
+
+check "9.2 Finance Analyst template exists" \
+  "test -f server/internal/agenttmpl/templates/finance-analyst.json"
+
+check "9.3 Business Analyst template exists" \
+  "test -f server/internal/agenttmpl/templates/business-analyst.json"
+
+check "9.4 Project Manager template exists" \
+  "test -f server/internal/agenttmpl/templates/project-manager.json"
+
+check "9.5 Asymbl Content Marketer template exists" \
+  "test -f server/internal/agenttmpl/templates/asymbl-content-marketer.json"
+
+check "9.6 Asymbl Delivery BA template exists" \
+  "test -f server/internal/agenttmpl/templates/asymbl-delivery-ba.json"
+
+check "9.7 Asymbl Payroll COGS Split template exists" \
+  "test -f server/internal/agenttmpl/templates/asymbl-payroll-cogs-split.json"
+
+check "9.8 Asymbl India GST template exists" \
+  "test -f server/internal/agenttmpl/templates/asymbl-india-gst.json"
+
+check "9.9 Asymbl India FY Close template exists" \
+  "test -f server/internal/agenttmpl/templates/asymbl-india-fy-close.json"
+
+check "9.10 All templates pass agenttmpl loader validation (go test)" \
+  "(cd server && go test ./internal/agenttmpl/... -count=1 -timeout 30s)"
+
+echo ""
+
+# ── 10. Test Infrastructure ───────────────────────────────────────────────────
+echo "[ 10 ] Test Infrastructure"
+
+check "10.1 Middleware Redis tests use isolated DB 14 (not shared DB 1)" \
+  "grep -q 'middlewareTestRedisDB = 14' server/internal/middleware/auth_test.go"
+
+check "10.2 Flaky auth cache test uses dedicated DB constant" \
+  "grep -q 'opts.DB = middlewareTestRedisDB' server/internal/middleware/auth_test.go"
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "=== Results: $PASS passed, $FAIL failed ==="
 echo ""

@@ -16,6 +16,14 @@ import (
 // newRedisTestClient connects to REDIS_TEST_URL, flushes, and skips when
 // unset — same gating pattern the rest of the suite uses for Redis-backed
 // tests, so `go test ./...` works on a stock laptop without a Redis.
+// middlewareTestRedisDB is a dedicated Redis DB number for the middleware
+// package tests. go test ./... runs packages in parallel; all packages that
+// call FlushDB on the same DB number will race — a cleanup in one package
+// can wipe a key that another package's in-flight test just Set.
+// DB 14 is reserved for this package; server/internal/handler uses the DB
+// in the REDIS_TEST_URL (DB 1 by default).
+const middlewareTestRedisDB = 14
+
 func newRedisTestClient(t *testing.T) *redis.Client {
 	t.Helper()
 	url := os.Getenv("REDIS_TEST_URL")
@@ -26,6 +34,7 @@ func newRedisTestClient(t *testing.T) *redis.Client {
 	if err != nil {
 		t.Fatalf("parse REDIS_TEST_URL: %v", err)
 	}
+	opts.DB = middlewareTestRedisDB
 	rdb := redis.NewClient(opts)
 	ctx := context.Background()
 	if err := rdb.Ping(ctx).Err(); err != nil {

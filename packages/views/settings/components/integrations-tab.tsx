@@ -141,13 +141,14 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
   });
 
   const existingIntegration = slackData?.configured ? slackData.integration : undefined;
+  const history = slackData?.history ?? [];
 
   const [webhookURL, setWebhookURL] = useState("");
   const [triggerStatuses, setTriggerStatuses] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
 
   // Hydrate trigger statuses from server when data arrives and user hasn't edited.
-  // webhookURL is intentionally left blank — the masked value isn't useful in the input.
+  // webhookURL is left blank — the masked value isn't useful in an input field.
   useEffect(() => {
     if (!existingIntegration || dirty) return;
     setTriggerStatuses(existingIntegration.trigger_statuses ?? []);
@@ -169,7 +170,6 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
       await updateMutation.mutateAsync({
         webhook_url: webhookURL,
         trigger_statuses: triggerStatuses,
-        enabled: true,
       });
       setWebhookURL("");
       setDirty(false);
@@ -192,7 +192,7 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
     }
   }
 
-  async function handleDelete() {
+  async function handleDisconnect() {
     try {
       await deleteMutation.mutateAsync();
       setWebhookURL("");
@@ -231,15 +231,33 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
 
         {canManage && (
           <div className="space-y-4">
+            {/* Active integration status */}
+            {slackData?.configured && existingIntegration && (
+              <div className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Active webhook</p>
+                <p className="text-xs font-mono text-foreground truncate">
+                  {existingIntegration.webhook_url_mask}
+                </p>
+                {existingIntegration.last_sent_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Last sent: {new Date(existingIntegration.last_sent_at).toLocaleString()}
+                  </p>
+                )}
+                {existingIntegration.last_error && (
+                  <p className="text-xs text-destructive">
+                    Last error: {existingIntegration.last_error}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Webhook URL input — always visible to allow reconfiguring */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">
-                {t(($) => $.integrations.slack_webhook_label)}
+                {slackData?.configured
+                  ? t(($) => $.integrations.slack_webhook_label_update)
+                  : t(($) => $.integrations.slack_webhook_label)}
               </label>
-              {slackData?.configured && !dirty && (
-                <p className="text-xs text-muted-foreground font-mono truncate">
-                  {existingIntegration?.webhook_url_mask}
-                </p>
-              )}
               <Input
                 type="text"
                 value={webhookURL}
@@ -280,13 +298,15 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
                 onClick={handleSave}
                 disabled={!webhookURL || updateMutation.isPending}
               >
-                {t(($) => $.integrations.slack_save_button)}
+                {slackData?.configured
+                  ? t(($) => $.integrations.slack_update_button)
+                  : t(($) => $.integrations.slack_save_button)}
               </Button>
               {slackData?.configured && (
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={handleDelete}
+                  onClick={handleDisconnect}
                   disabled={deleteMutation.isPending}
                   className="text-destructive hover:text-destructive"
                 >
@@ -294,6 +314,29 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
                 </Button>
               )}
             </div>
+
+            {/* History — previous webhook configurations preserved on disconnect */}
+            {history.length > 0 && (
+              <div className="space-y-1.5 border-t pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t(($) => $.integrations.slack_history_label)}
+                </p>
+                <div className="space-y-1.5">
+                  {history.map((entry, i) => (
+                    <div key={i} className="rounded-md bg-muted/30 px-3 py-2 space-y-0.5">
+                      <p className="text-xs font-mono text-muted-foreground truncate">
+                        {entry.webhook_url_mask}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70">
+                        Disconnected {new Date(entry.disabled_at).toLocaleString()}
+                        {entry.last_sent_at &&
+                          ` · Last sent ${new Date(entry.last_sent_at).toLocaleString()}`}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

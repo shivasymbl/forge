@@ -21,6 +21,18 @@ func (q *Queries) DeleteSlackIntegration(ctx context.Context, workspaceID pgtype
 	return err
 }
 
+const disableSlackIntegration = `-- name: DisableSlackIntegration :exec
+UPDATE workspace_slack_integrations
+SET enabled    = false,
+    updated_at = now()
+WHERE workspace_id = $1 AND enabled = true
+`
+
+func (q *Queries) DisableSlackIntegration(ctx context.Context, workspaceID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, disableSlackIntegration, workspaceID)
+	return err
+}
+
 const getSlackIntegrationForWorkspace = `-- name: GetSlackIntegrationForWorkspace :one
 SELECT id, workspace_id, enabled, webhook_url, label, trigger_statuses, last_sent_at, last_error, created_by, created_at, updated_at FROM workspace_slack_integrations
 WHERE workspace_id = $1 AND enabled = true
@@ -44,6 +56,45 @@ func (q *Queries) GetSlackIntegrationForWorkspace(ctx context.Context, workspace
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listSlackIntegrationHistoryForWorkspace = `-- name: ListSlackIntegrationHistoryForWorkspace :many
+SELECT id, workspace_id, enabled, webhook_url, label, trigger_statuses, last_sent_at, last_error, created_by, created_at, updated_at FROM workspace_slack_integrations
+WHERE workspace_id = $1 AND enabled = false
+ORDER BY updated_at DESC
+LIMIT 5
+`
+
+func (q *Queries) ListSlackIntegrationHistoryForWorkspace(ctx context.Context, workspaceID pgtype.UUID) ([]WorkspaceSlackIntegration, error) {
+	rows, err := q.db.Query(ctx, listSlackIntegrationHistoryForWorkspace, workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []WorkspaceSlackIntegration{}
+	for rows.Next() {
+		var i WorkspaceSlackIntegration
+		if err := rows.Scan(
+			&i.ID,
+			&i.WorkspaceID,
+			&i.Enabled,
+			&i.WebhookUrl,
+			&i.Label,
+			&i.TriggerStatuses,
+			&i.LastSentAt,
+			&i.LastError,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateSlackIntegrationStatus = `-- name: UpdateSlackIntegrationStatus :exec
@@ -70,21 +121,19 @@ const upsertSlackIntegration = `-- name: UpsertSlackIntegration :one
 INSERT INTO workspace_slack_integrations (
     workspace_id, enabled, webhook_url, label, trigger_statuses, created_by
 ) VALUES (
-    $1, $2, $3, $4, $5, $6
+    $1, true, $2, $3, $4, $5
 )
 ON CONFLICT (workspace_id) WHERE enabled = true
 DO UPDATE SET
     webhook_url      = EXCLUDED.webhook_url,
     label            = EXCLUDED.label,
     trigger_statuses = EXCLUDED.trigger_statuses,
-    enabled          = EXCLUDED.enabled,
     updated_at       = now()
 RETURNING id, workspace_id, enabled, webhook_url, label, trigger_statuses, last_sent_at, last_error, created_by, created_at, updated_at
 `
 
 type UpsertSlackIntegrationParams struct {
 	WorkspaceID     pgtype.UUID `json:"workspace_id"`
-	Enabled         bool        `json:"enabled"`
 	WebhookUrl      string      `json:"webhook_url"`
 	Label           string      `json:"label"`
 	TriggerStatuses []byte      `json:"trigger_statuses"`
@@ -94,7 +143,6 @@ type UpsertSlackIntegrationParams struct {
 func (q *Queries) UpsertSlackIntegration(ctx context.Context, arg UpsertSlackIntegrationParams) (WorkspaceSlackIntegration, error) {
 	row := q.db.QueryRow(ctx, upsertSlackIntegration,
 		arg.WorkspaceID,
-		arg.Enabled,
 		arg.WebhookUrl,
 		arg.Label,
 		arg.TriggerStatuses,

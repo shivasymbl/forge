@@ -173,16 +173,19 @@
     "slack_title": "Slack",
     "slack_description": "Post to a Slack channel when issue status changes.",
     "slack_webhook_label": "Webhook URL",
+    "slack_webhook_label_update": "New webhook URL (leave blank to keep current)",
     "slack_webhook_placeholder": "https://hooks.slack.com/services/...",
     "slack_triggers_label": "Notify when status changes to:",
     "slack_triggers_any": "Any status",
     "slack_test_button": "Send test",
-    "slack_save_button": "Save",
+    "slack_save_button": "Connect",
+    "slack_update_button": "Update",
     "slack_delete_button": "Disconnect",
+    "slack_history_label": "Previous configurations",
     "slack_toast_test_success": "Test message sent to Slack",
     "slack_toast_test_failed": "Test failed — check the webhook URL",
     "slack_toast_saved": "Slack integration saved",
-    "slack_toast_deleted": "Slack integration removed"
+    "slack_toast_deleted": "Slack disconnected — configure a new webhook to reconnect"
   },
   "repositories": {
     "section_title": "Repositories",

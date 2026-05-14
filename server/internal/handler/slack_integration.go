@@ -29,21 +29,28 @@ var validTriggerStatuses = map[string]bool{
 	"cancelled":   true,
 }
 
-// ── Response shape ────────────────────────────────────────────────────────────
+// ── Response shapes ───────────────────────────────────────────────────────────
 
 type SlackIntegrationResponse struct {
-	WorkspaceID    string   `json:"workspace_id"`
-	Enabled        bool     `json:"enabled"`
-	WebhookURLMask string   `json:"webhook_url_mask"`
-	Label          string   `json:"label"`
+	WorkspaceID     string   `json:"workspace_id"`
+	WebhookURLMask  string   `json:"webhook_url_mask"`
+	Label           string   `json:"label"`
 	TriggerStatuses []string `json:"trigger_statuses"`
-	LastSentAt     *string  `json:"last_sent_at"`
-	LastError      *string  `json:"last_error"`
+	LastSentAt      *string  `json:"last_sent_at"`
+	LastError       *string  `json:"last_error"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
+}
+
+type SlackIntegrationHistoryEntry struct {
+	WebhookURLMask  string   `json:"webhook_url_mask"`
+	Label           string   `json:"label"`
+	TriggerStatuses []string `json:"trigger_statuses"`
+	LastSentAt      *string  `json:"last_sent_at"`
+	DisabledAt      string   `json:"disabled_at"`
 }
 
 func slackIntegrationToResponse(row db.WorkspaceSlackIntegration) SlackIntegrationResponse {
-	mask := maskWebhookURL(row.WebhookUrl)
-
 	var triggers []string
 	if len(row.TriggerStatuses) > 0 {
 		_ = json.Unmarshal(row.TriggerStatuses, &triggers)
@@ -54,12 +61,30 @@ func slackIntegrationToResponse(row db.WorkspaceSlackIntegration) SlackIntegrati
 
 	return SlackIntegrationResponse{
 		WorkspaceID:     uuidToString(row.WorkspaceID),
-		Enabled:         row.Enabled,
-		WebhookURLMask:  mask,
+		WebhookURLMask:  maskWebhookURL(row.WebhookUrl),
 		Label:           row.Label,
 		TriggerStatuses: triggers,
 		LastSentAt:      timestampToPtr(row.LastSentAt),
 		LastError:       textToPtr(row.LastError),
+		CreatedAt:       timestampToString(row.CreatedAt),
+		UpdatedAt:       timestampToString(row.UpdatedAt),
+	}
+}
+
+func slackIntegrationToHistoryEntry(row db.WorkspaceSlackIntegration) SlackIntegrationHistoryEntry {
+	var triggers []string
+	if len(row.TriggerStatuses) > 0 {
+		_ = json.Unmarshal(row.TriggerStatuses, &triggers)
+	}
+	if triggers == nil {
+		triggers = []string{}
+	}
+	return SlackIntegrationHistoryEntry{
+		WebhookURLMask:  maskWebhookURL(row.WebhookUrl),
+		Label:           row.Label,
+		TriggerStatuses: triggers,
+		LastSentAt:      timestampToPtr(row.LastSentAt),
+		DisabledAt:      timestampToString(row.UpdatedAt),
 	}
 }
 
@@ -75,8 +100,8 @@ func maskWebhookURL(url string) string {
 
 // ── Handlers ──────────────────────────────────────────────────────────────────
 
-// GetSlackIntegration returns the current Slack integration config for a
-// workspace. The webhook URL is masked in the response.
+// GetSlackIntegration returns the active Slack integration for a workspace
+// plus up to 5 historical (disabled) entries so admins can see past configs.
 func (h *Handler) GetSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
@@ -85,19 +110,30 @@ func (h *Handler) GetSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	row, err := h.Queries.GetSlackIntegrationForWorkspace(r.Context(), wsUUID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			writeJSON(w, http.StatusOK, map[string]any{"configured": false})
-			return
-		}
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		slog.Warn("GetSlackIntegration failed", append(logger.RequestAttrs(r), "error", err)...)
 		writeError(w, http.StatusInternalServerError, "failed to get Slack integration")
 		return
 	}
 
+	history, _ := h.Queries.ListSlackIntegrationHistoryForWorkspace(r.Context(), wsUUID)
+	historyEntries := make([]SlackIntegrationHistoryEntry, 0, len(history))
+	for _, h := range history {
+		historyEntries = append(historyEntries, slackIntegrationToHistoryEntry(h))
+	}
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		writeJSON(w, http.StatusOK, map[string]any{
+			"configured": false,
+			"history":    historyEntries,
+		})
+		return
+	}
+
 	writeJSON(w, http.StatusOK, map[string]any{
-		"configured":   true,
-		"integration":  slackIntegrationToResponse(row),
+		"configured":  true,
+		"integration": slackIntegrationToResponse(row),
+		"history":     historyEntries,
 	})
 }
 
@@ -105,10 +141,10 @@ type putSlackIntegrationRequest struct {
 	WebhookURL      string   `json:"webhook_url"`
 	Label           string   `json:"label"`
 	TriggerStatuses []string `json:"trigger_statuses"`
-	Enabled         *bool    `json:"enabled"`
 }
 
-// PutSlackIntegration creates or updates the Slack integration for a workspace.
+// PutSlackIntegration creates or updates the active Slack integration for a
+// workspace. Always sets enabled=true — use DELETE to disconnect.
 // Requires admin/owner role (enforced by router middleware).
 func (h *Handler) PutSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
@@ -150,14 +186,8 @@ func (h *Handler) PutSlackIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	enabled := true
-	if req.Enabled != nil {
-		enabled = *req.Enabled
-	}
-
 	row, err := h.Queries.UpsertSlackIntegration(r.Context(), db.UpsertSlackIntegrationParams{
 		WorkspaceID:     wsUUID,
-		Enabled:         enabled,
 		WebhookUrl:      req.WebhookURL,
 		Label:           req.Label,
 		TriggerStatuses: triggersJSON,
@@ -175,8 +205,9 @@ func (h *Handler) PutSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteSlackIntegration removes the Slack integration for a workspace.
-// Requires admin/owner role.
+// DeleteSlackIntegration soft-deletes (disables) the active Slack integration
+// for a workspace. The row is preserved as audit history. A new integration
+// can be added immediately via PUT. Requires admin/owner role.
 func (h *Handler) DeleteSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	workspaceID := ctxWorkspaceID(r.Context())
 	wsUUID, ok := parseUUIDOrBadRequest(w, workspaceID, "workspace_id")
@@ -184,9 +215,9 @@ func (h *Handler) DeleteSlackIntegration(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.Queries.DeleteSlackIntegration(r.Context(), wsUUID); err != nil {
-		slog.Warn("DeleteSlackIntegration failed", append(logger.RequestAttrs(r), "error", err)...)
-		writeError(w, http.StatusInternalServerError, "failed to delete Slack integration")
+	if err := h.Queries.DisableSlackIntegration(r.Context(), wsUUID); err != nil {
+		slog.Warn("DisableSlackIntegration failed", append(logger.RequestAttrs(r), "error", err)...)
+		writeError(w, http.StatusInternalServerError, "failed to disconnect Slack integration")
 		return
 	}
 
@@ -225,7 +256,7 @@ func (h *Handler) TestSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	testCtx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
-	// Use a detached context for DB status writes so they survive client disconnect.
+	// Detached context for DB writes — survives client disconnect.
 	statusCtx, statusCancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer statusCancel()
 
@@ -239,7 +270,6 @@ func (h *Handler) TestSlackIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Clear any prior error and stamp last_sent_at only after confirmed delivery.
 	_ = h.Queries.UpdateSlackIntegrationStatus(statusCtx, db.UpdateSlackIntegrationStatusParams{
 		WorkspaceID: wsUUID,
 		LastSentAt:  pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},

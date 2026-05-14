@@ -234,18 +234,18 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
             {/* Active integration status */}
             {slackData?.configured && existingIntegration && (
               <div className="rounded-md bg-muted/50 px-3 py-2 space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Active webhook</p>
+                <p className="text-xs font-medium text-muted-foreground">{t(($) => $.integrations.slack_active_label)}</p>
                 <p className="text-xs font-mono text-foreground truncate">
                   {existingIntegration.webhook_url_mask}
                 </p>
                 {existingIntegration.last_sent_at && (
                   <p className="text-xs text-muted-foreground">
-                    Last sent: {new Date(existingIntegration.last_sent_at).toLocaleString()}
+                    {t(($) => $.integrations.slack_last_sent)}: {new Date(existingIntegration.last_sent_at).toLocaleString()}
                   </p>
                 )}
                 {existingIntegration.last_error && (
                   <p className="text-xs text-destructive">
-                    Last error: {existingIntegration.last_error}
+                    {t(($) => $.integrations.slack_last_error_label)}: {existingIntegration.last_error}
                   </p>
                 )}
               </div>
@@ -328,9 +328,11 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
                         {entry.webhook_url_mask}
                       </p>
                       <p className="text-[10px] text-muted-foreground/70">
-                        Disconnected {new Date(entry.disabled_at).toLocaleString()}
-                        {entry.last_sent_at &&
-                          ` · Last sent ${new Date(entry.last_sent_at).toLocaleString()}`}
+                        {t(($) => $.integrations.slack_history_disconnected)}{" "}
+                        {new Date(entry.disabled_at).toLocaleString()}
+                        {entry.last_sent_at && (
+                          <>{" · "}{t(($) => $.integrations.slack_last_sent)}{" "}{new Date(entry.last_sent_at).toLocaleString()}</>
+                        )}
                       </p>
                     </div>
                   ))}

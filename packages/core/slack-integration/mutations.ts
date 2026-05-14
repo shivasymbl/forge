@@ -29,9 +29,13 @@ export function useDeleteSlackIntegration() {
 }
 
 export function useTestSlackIntegration() {
+  const qc = useQueryClient();
   const wsId = useWorkspaceId();
 
   return useMutation({
     mutationFn: () => api.testSlackIntegration(wsId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: slackIntegrationKeys.all(wsId) });
+    },
   });
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,8 +28,6 @@ var validTriggerStatuses = map[string]bool{
 	"blocked":     true,
 	"cancelled":   true,
 }
-
-const slackWebhookURLPrefix = "https://hooks.slack.com/services/"
 
 // ── Response shape ────────────────────────────────────────────────────────────
 
@@ -135,8 +132,8 @@ func (h *Handler) PutSlackIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(req.WebhookURL, slackWebhookURLPrefix) {
-		writeError(w, http.StatusBadRequest, "webhook_url must start with "+slackWebhookURLPrefix)
+	if err := slackpkg.ValidateWebhookURL(req.WebhookURL); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -228,9 +225,13 @@ func (h *Handler) TestSlackIntegration(w http.ResponseWriter, r *http.Request) {
 	testCtx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 
+	// Use a detached context for DB status writes so they survive client disconnect.
+	statusCtx, statusCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer statusCancel()
+
 	if err := slackpkg.PostWebhook(testCtx, row.WebhookUrl, body); err != nil {
 		slog.Warn("TestSlackIntegration: post failed", append(logger.RequestAttrs(r), "error", err)...)
-		_ = h.Queries.UpdateSlackIntegrationStatus(r.Context(), db.UpdateSlackIntegrationStatusParams{
+		_ = h.Queries.UpdateSlackIntegrationStatus(statusCtx, db.UpdateSlackIntegrationStatusParams{
 			WorkspaceID: wsUUID,
 			LastError:   pgtype.Text{String: err.Error(), Valid: true},
 		})
@@ -238,9 +239,11 @@ func (h *Handler) TestSlackIntegration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = h.Queries.UpdateSlackIntegrationStatus(r.Context(), db.UpdateSlackIntegrationStatusParams{
+	// Clear any prior error and stamp last_sent_at only after confirmed delivery.
+	_ = h.Queries.UpdateSlackIntegrationStatus(statusCtx, db.UpdateSlackIntegrationStatusParams{
 		WorkspaceID: wsUUID,
 		LastSentAt:  pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true},
+		LastError:   pgtype.Text{},
 	})
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})

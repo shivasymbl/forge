@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "@multica/ui/components/ui/button";
@@ -146,13 +146,12 @@ function SlackCard({ canManage, wsId }: { canManage: boolean; wsId: string }) {
   const [triggerStatuses, setTriggerStatuses] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
 
-  // Hydrate form when data arrives (only if user hasn't started editing)
-  if (existingIntegration && !dirty && webhookURL === "" && triggerStatuses.length === 0) {
-    // Don't show the masked URL in the input — leave blank to prompt re-entry
-    if (existingIntegration.trigger_statuses.length > 0) {
-      setTriggerStatuses(existingIntegration.trigger_statuses);
-    }
-  }
+  // Hydrate trigger statuses from server when data arrives and user hasn't edited.
+  // webhookURL is intentionally left blank — the masked value isn't useful in the input.
+  useEffect(() => {
+    if (!existingIntegration || dirty) return;
+    setTriggerStatuses(existingIntegration.trigger_statuses ?? []);
+  }, [existingIntegration, dirty]);
 
   const updateMutation = useUpdateSlackIntegration();
   const deleteMutation = useDeleteSlackIntegration();

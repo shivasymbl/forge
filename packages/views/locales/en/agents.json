@@ -399,5 +399,12 @@
     "runtime_offline": "Daemon offline",
     "runtime_recovery": "Daemon restarted",
     "manual": "Cancelled by user"
+  },
+  "template_browser": {
+    "button": "Templates",
+    "title": "Agent Templates",
+    "loading": "Loading templates…",
+    "skill_count_one": "{{count}} skill",
+    "skill_count_other": "{{count}} skills"
   }
 }

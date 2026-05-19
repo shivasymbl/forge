@@ -547,7 +547,7 @@ function PageHeaderBar({
         {isAdmin && (
           <Button type="button" size="sm" variant="outline" onClick={onBrowseTemplates}>
             <LayoutTemplate className="h-3 w-3" />
-            Templates
+            {t(($) => $.template_browser.button)}
           </Button>
         )}
         <Button type="button" size="sm" onClick={onCreate} disabled={!isAdmin}>
@@ -572,14 +572,15 @@ function TemplateBrowserModal({
   onClose: () => void;
   onSelect: (template: AgentTemplateSummary) => void;
 }) {
+  const { t } = useT("agents");
   const { data: templates = [], isLoading } = useQuery(agentTemplateListOptions());
 
   const grouped = useMemo(() => {
     const map = new Map<string, AgentTemplateSummary[]>();
-    for (const t of templates) {
-      const cat = t.category ?? "General";
+    for (const tmpl of templates) {
+      const cat = tmpl.category ?? "General";
       const list = map.get(cat) ?? [];
-      list.push(t);
+      list.push(tmpl);
       map.set(cat, list);
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -591,11 +592,13 @@ function TemplateBrowserModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <LayoutTemplate className="h-4 w-4" />
-            Agent Templates
+            {t(($) => $.template_browser.title)}
           </DialogTitle>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading templates…</div>
+          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
+            {t(($) => $.template_browser.loading)}
+          </div>
         ) : (
           <div className="space-y-6 pt-2">
             {grouped.map(([category, items]) => (
@@ -612,7 +615,9 @@ function TemplateBrowserModal({
                       <span className="text-sm font-medium leading-snug">{tmpl.name}</span>
                       <span className="line-clamp-2 text-xs text-muted-foreground">{tmpl.description}</span>
                       {tmpl.skills.length > 0 && (
-                        <span className="mt-1 text-[10px] text-muted-foreground/70">{tmpl.skills.length} skill{tmpl.skills.length !== 1 ? "s" : ""}</span>
+                        <span className="mt-1 text-[10px] text-muted-foreground/70">
+                          {t(($) => $.template_browser.skill_count, { count: tmpl.skills.length })}
+                        </span>
                       )}
                     </button>
                   ))}

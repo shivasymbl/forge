@@ -84,7 +84,7 @@ func InjectRuntimeConfig(workDir, provider string, ctx TaskContextForEnv) (strin
 func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	var b strings.Builder
 
-	b.WriteString("# Multica Agent Runtime\n\n")
+	b.WriteString("# Forge Agent Runtime\n\n")
 	b.WriteString("You are a coding agent in the Forge platform. Use the `forge` CLI to interact with the platform.\n\n")
 
 	// Always emit agent identity so the agent knows who it is, even when
@@ -201,7 +201,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		// that doesn't propagate the user message into its working context
 		// (or a resumed session) still avoids the assignment-task workflow
 		// pointing at an empty issue id.
-		b.WriteString("**This task was triggered by quick-create.** There is NO existing Multica issue. Follow the field and output rules in the user message you just received; ignore the default assignment-task workflow.\n\n")
+		b.WriteString("**This task was triggered by quick-create.** There is NO existing Forge issue. Follow the field and output rules in the user message you just received; ignore the default assignment-task workflow.\n\n")
 		b.WriteString("Hard guardrails (apply even if the user message is missing):\n")
 		b.WriteString("- Run exactly one `forge issue create` invocation, then exit.\n")
 		b.WriteString("- Do NOT call `forge issue get`, `forge issue status`, or `forge issue comment add` for this task — there is no issue to query, transition, or comment on. The platform writes the user's success/failure inbox notification automatically based on whether `forge issue create` succeeded.\n")
@@ -209,7 +209,7 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 	} else if ctx.AutopilotRunID != "" {
 		// Autopilot run_only task: no issue exists, so the agent must not
 		// follow the assignment/comment workflow.
-		b.WriteString("**This task was triggered by an Autopilot in run-only mode.** There is no assigned Multica issue for this run.\n\n")
+		b.WriteString("**This task was triggered by an Autopilot in run-only mode.** There is no assigned Forge issue for this run.\n\n")
 		fmt.Fprintf(&b, "- Autopilot run ID: `%s`\n", ctx.AutopilotRunID)
 		if ctx.AutopilotID != "" {
 			fmt.Fprintf(&b, "- Autopilot ID: `%s`\n", ctx.AutopilotID)
@@ -312,12 +312,12 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 
 	b.WriteString("## Attachments\n\n")
 	b.WriteString("Issues and comments may include file attachments (images, documents, etc.).\n")
-	b.WriteString("When a task includes attachment IDs and you need the files, inspect `forge attachment --help` and use the authenticated CLI path. Do not open Multica resource URLs directly.\n\n")
+	b.WriteString("When a task includes attachment IDs and you need the files, inspect `forge attachment --help` and use the authenticated CLI path. Do not open Forge resource URLs directly.\n\n")
 
 	b.WriteString("## Important: Always Use the `forge` CLI\n\n")
 	b.WriteString("All interactions with Forge platform resources — including issues, comments, attachments, images, files, and any other platform data — **must** go through the `forge` CLI. ")
-	b.WriteString("Do NOT use `curl`, `wget`, or any other HTTP client to access Multica URLs or APIs directly. ")
-	b.WriteString("Multica resource URLs require authenticated access that only the `forge` CLI can provide.\n\n")
+	b.WriteString("Do NOT use `curl`, `wget`, or any other HTTP client to access Forge URLs or APIs directly. ")
+	b.WriteString("Forge resource URLs require authenticated access that only the `forge` CLI can provide.\n\n")
 	b.WriteString("If you need to perform an operation that is not covered by any existing `forge` command, ")
 	b.WriteString("do NOT attempt to work around it. Instead, post a comment mentioning the workspace owner to request the missing functionality.\n\n")
 

@@ -369,10 +369,16 @@ export function CreateAgentDialog({
               }
             />
 
-            <SkillMultiSelect
-              selectedIds={selectedSkillIds}
-              onChange={setSelectedSkillIds}
-            />
+            {/* Hide skill picker when creating from a template — skills are
+                attached server-side by createAgentFromTemplate. Showing the
+                picker would let the user add skills, triggering a post-create
+                setAgentSkills call that replaces all template skills. */}
+            {!templateSeed && (
+              <SkillMultiSelect
+                selectedIds={selectedSkillIds}
+                onChange={setSelectedSkillIds}
+              />
+            )}
           </div>
         </div>
 

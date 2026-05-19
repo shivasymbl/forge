@@ -306,6 +306,10 @@ export function AgentsPage() {
         model: data.model,
         visibility: data.visibility,
         description: data.description,
+        // Forward user edits to instructions and avatar so pre-filled
+        // form changes aren't silently discarded.
+        instructions: data.instructions ?? undefined,
+        avatar_url: data.avatar_url ?? undefined,
       });
       agent = result.agent;
     } else {
@@ -501,10 +505,17 @@ export function AgentsPage() {
         onSelect={async (tmpl) => {
           setShowTemplateBrowser(false);
           setSelectedTemplateSlug(tmpl.slug);
-          // Fetch full detail before opening dialog so instructions are pre-filled
-          const detail = await api.getAgentTemplate(tmpl.slug);
-          setSelectedTemplateDetail(detail);
-          setShowCreate(true);
+          try {
+            // Fetch full detail before opening dialog so instructions are pre-filled
+            const detail = await api.getAgentTemplate(tmpl.slug);
+            setSelectedTemplateDetail(detail);
+            setShowCreate(true);
+          } catch {
+            // Clear stale slug so a subsequent New Agent click doesn't
+            // accidentally submit as createAgentFromTemplate.
+            setSelectedTemplateSlug(null);
+            setSelectedTemplateDetail(null);
+          }
         }}
       />
     </div>

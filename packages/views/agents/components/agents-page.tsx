@@ -12,11 +12,10 @@ import {
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
-import type { Agent, AgentRuntime, AgentTemplateSummary, CreateAgentRequest } from "@multica/core/types";
+import type { Agent, AgentRuntime, AgentTemplate, AgentTemplateSummary, CreateAgentRequest } from "@multica/core/types";
 import {
   type AgentAvailability,
   agentRunCounts30dOptions,
-  agentTemplateDetailOptions,
   agentTemplateListOptions,
   summarizeActivityWindow,
   useWorkspaceActivityMap,
@@ -126,15 +125,11 @@ export function AgentsPage() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<Agent | null>(
     null,
   );
-  // Browse Templates flow: stores the selected agenttmpl slug so handleCreate
-  // calls createAgentFromTemplate instead of createAgent. Detail is fetched
-  // so the create dialog can pre-fill name + instructions.
+  // Browse Templates flow: slug drives createAgentFromTemplate; detail is fetched
+  // imperatively before opening the dialog so instructions are ready immediately.
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
-  const { data: selectedTemplateDetail } = useQuery({
-    ...agentTemplateDetailOptions(selectedTemplateSlug ?? ""),
-    enabled: !!selectedTemplateSlug,
-  });
+  const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<AgentTemplate | null>(null);
 
   const runtimesById = useMemo(() => {
     const m = new Map<string, AgentRuntime>();
@@ -325,6 +320,7 @@ export function AgentsPage() {
     setShowCreate(false);
     setDuplicateTemplate(null);
     setSelectedTemplateSlug(null);
+    setSelectedTemplateDetail(null);
     navigation.push(paths.agentDetail(agent.id));
     qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
     return agent;
@@ -493,6 +489,7 @@ export function AgentsPage() {
             setShowCreate(false);
             setDuplicateTemplate(null);
             setSelectedTemplateSlug(null);
+            setSelectedTemplateDetail(null);
           }}
           onCreate={handleCreate}
         />
@@ -501,9 +498,12 @@ export function AgentsPage() {
       <TemplateBrowserModal
         open={showTemplateBrowser}
         onClose={() => setShowTemplateBrowser(false)}
-        onSelect={(tmpl) => {
+        onSelect={async (tmpl) => {
           setShowTemplateBrowser(false);
           setSelectedTemplateSlug(tmpl.slug);
+          // Fetch full detail before opening dialog so instructions are pre-filled
+          const detail = await api.getAgentTemplate(tmpl.slug);
+          setSelectedTemplateDetail(detail);
           setShowCreate(true);
         }}
       />

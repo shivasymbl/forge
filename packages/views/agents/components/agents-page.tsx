@@ -16,6 +16,7 @@ import type { Agent, AgentRuntime, AgentTemplateSummary, CreateAgentRequest } fr
 import {
   type AgentAvailability,
   agentRunCounts30dOptions,
+  agentTemplateDetailOptions,
   agentTemplateListOptions,
   summarizeActivityWindow,
   useWorkspaceActivityMap,
@@ -126,9 +127,14 @@ export function AgentsPage() {
     null,
   );
   // Browse Templates flow: stores the selected agenttmpl slug so handleCreate
-  // calls createAgentFromTemplate instead of createAgent.
+  // calls createAgentFromTemplate instead of createAgent. Detail is fetched
+  // so the create dialog can pre-fill name + instructions.
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
+  const { data: selectedTemplateDetail } = useQuery({
+    ...agentTemplateDetailOptions(selectedTemplateSlug ?? ""),
+    enabled: !!selectedTemplateSlug,
+  });
 
   const runtimesById = useMemo(() => {
     const m = new Map<string, AgentRuntime>();
@@ -482,6 +488,7 @@ export function AgentsPage() {
           members={members}
           currentUserId={currentUser?.id ?? null}
           template={duplicateTemplate}
+          templateSeed={selectedTemplateDetail ?? null}
           onClose={() => {
             setShowCreate(false);
             setDuplicateTemplate(null);

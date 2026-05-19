@@ -13,6 +13,7 @@ import { useWorkspaceId } from "@multica/core/hooks";
 import { workspaceKeys } from "@multica/core/workspace/queries";
 import type {
   Agent,
+  AgentTemplate,
   AgentVisibility,
   RuntimeDevice,
   MemberWithUser,
@@ -44,6 +45,7 @@ export function CreateAgentDialog({
   members,
   currentUserId,
   template,
+  templateSeed,
   squadId,
   onClose,
   onCreate,
@@ -60,6 +62,11 @@ export function CreateAgentDialog({
   // Skills are copied separately by the caller after createAgent
   // succeeds — they're not part of CreateAgentRequest.
   template?: Agent | null;
+  // When provided, the dialog opens in "From template" mode: name,
+  // description, and instructions are pre-filled from the agenttmpl
+  // catalog entry. Skills are materialized server-side by
+  // createAgentFromTemplate — they're not shown in the form.
+  templateSeed?: Pick<AgentTemplate, "name" | "description" | "instructions"> | null;
   // When set, every successful create is followed by
   // addSquadMember(squadId, agent) so the new agent joins this squad.
   // If the squad-join call fails the agent still exists and the dialog
@@ -75,19 +82,22 @@ export function CreateAgentDialog({
 }) {
   const { t } = useT("agents");
   const isDuplicate = !!template;
+  const isFromTemplate = !template && !!templateSeed;
   const queryClient = useQueryClient();
   const wsId = useWorkspaceId();
 
-  // Name defaults: duplicate uses "<original> copy". Manual-create starts blank.
+  // Name defaults: duplicate appends " copy", template seed uses template name, blank otherwise.
   const [name, setName] = useState(
-    template ? `${template.name}${t(($) => $.create_dialog.duplicate_copy_suffix)}` : "",
+    template ? `${template.name}${t(($) => $.create_dialog.duplicate_copy_suffix)}`
+    : templateSeed ? templateSeed.name
+    : "",
   );
-  const [description, setDescription] = useState(template?.description ?? "");
+  const [description, setDescription] = useState(template?.description ?? templateSeed?.description ?? "");
   const [visibility, setVisibility] = useState<AgentVisibility>(
     template?.visibility ?? "workspace",
   );
   const [model, setModel] = useState(template?.model ?? "");
-  const [instructions, setInstructions] = useState(template?.instructions ?? "");
+  const [instructions, setInstructions] = useState(template?.instructions ?? templateSeed?.instructions ?? "");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(template?.avatar_url ?? null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(
     () => new Set(template?.skills.map((s) => s.id) ?? []),
@@ -221,6 +231,8 @@ export function CreateAgentDialog({
 
   const headerTitle = isDuplicate
     ? t(($) => $.create_dialog.title_duplicate)
+    : isFromTemplate
+    ? `${t(($) => $.create_dialog.title_create)} · ${templateSeed!.name}`
     : t(($) => $.create_dialog.title_create);
 
   return (

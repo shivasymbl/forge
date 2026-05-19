@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCurrentWorkspace, useWorkspacePaths } from "@multica/core/paths";
 import { agentListOptions, memberListOptions, squadListOptions } from "@multica/core/workspace/queries";
 import { useAuthStore } from "@multica/core/auth";
+import { useSquadsViewStore } from "@multica/core/squads/stores";
 import { AppLink } from "../../navigation";
 import { PageHeader } from "../../layout/page-header";
 import { Users, Plus, Search, Bot, User } from "lucide-react";
@@ -14,6 +15,7 @@ import { ActorAvatar as ActorAvatarBase } from "@multica/ui/components/common/ac
 import { useModalStore } from "@multica/core/modals";
 import type { Agent, Squad } from "@multica/core/types";
 import { useT } from "../../i18n";
+import { matchesPinyin } from "../../editor/extensions/pinyin-match";
 
 type Scope = "mine" | "all";
 
@@ -42,7 +44,8 @@ export function SquadsPage() {
     return m;
   }, [members]);
 
-  const [scope, setScope] = useState<Scope>("mine");
+  const scope = useSquadsViewStore((s) => s.scope);
+  const setScope = useSquadsViewStore((s) => s.setScope);
   const [search, setSearch] = useState("");
 
   const scopeCounts = useMemo(() => {
@@ -57,13 +60,13 @@ export function SquadsPage() {
     const q = search.trim().toLowerCase();
     return squads.filter((s) => {
       if (scope === "mine" && currentUser && s.creator_id !== currentUser.id) return false;
-      if (q && !s.name.toLowerCase().includes(q) && !s.description.toLowerCase().includes(q)) return false;
+      if (q && !s.name.toLowerCase().includes(q) && !matchesPinyin(s.name, q) && !s.description.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [squads, scope, currentUser, search]);
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       <PageHeader className="justify-between px-5">
         <div className="flex items-center gap-2">
           <Users className="h-4 w-4 text-muted-foreground" />
@@ -78,7 +81,7 @@ export function SquadsPage() {
         </Button>
       </PageHeader>
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-1 min-h-0 flex-col overflow-hidden">
         {isLoading ? (
           <div className="p-6 text-muted-foreground text-sm">Loading...</div>
         ) : squads.length === 0 ? (
@@ -89,17 +92,17 @@ export function SquadsPage() {
         ) : (
           <>
             <div className="flex h-12 shrink-0 items-center gap-3 border-b px-4">
-              <div className="relative">
+              <div className="relative flex-1 min-w-0 max-w-sm">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search squads..."
-                  className="h-8 w-64 pl-8 text-sm"
+                  className="h-8 w-full pl-8 text-sm"
                 />
               </div>
               <ScopeSegment scope={scope} setScope={setScope} counts={scopeCounts} />
-              <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground/70">
+              <span className="hidden sm:inline font-mono text-xs tabular-nums text-muted-foreground/70">
                 {filtered.length} / {squads.length}
               </span>
             </div>
@@ -128,25 +131,25 @@ function SquadCard({ squad, leader, creator, href }: { squad: Squad; leader?: Ag
   return (
     <AppLink
       href={href}
-      className="flex items-center gap-4 rounded-lg border p-4 hover:bg-accent/50 transition-colors"
+      className="flex items-center gap-3 sm:gap-4 rounded-lg border p-3 sm:p-4 hover:bg-accent/50 transition-colors w-full overflow-hidden"
     >
       <SquadAvatar squad={squad} />
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <p className="font-medium truncate">{squad.name}</p>
         {squad.description && (
           <p className="text-sm text-muted-foreground truncate mt-0.5">{squad.description}</p>
         )}
-        <div className="flex items-center gap-3 mt-2">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
           {leader && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Bot className="size-3" />
-              <span className="truncate max-w-[120px]">{leader.name}</span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+              <Bot className="size-3 shrink-0" />
+              <span className="truncate">{leader.name}</span>
             </div>
           )}
           {creator && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <User className="size-3" />
-              <span className="truncate max-w-[120px]">{creator.name}</span>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
+              <User className="size-3 shrink-0" />
+              <span className="truncate">{creator.name}</span>
             </div>
           )}
         </div>

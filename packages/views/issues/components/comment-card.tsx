@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useRef, useState } from "react";
-import { CheckCircle2, ChevronRight, Copy, Download, Eye, FileText, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { CheckCircle2, ChevronRight, Copy, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@multica/ui/components/ui/card";
 import { Button } from "@multica/ui/components/ui/button";
@@ -30,7 +30,7 @@ import { QuickEmojiPicker } from "@multica/ui/components/common/quick-emoji-pick
 import { cn } from "@multica/ui/lib/utils";
 import { useActorName } from "@multica/core/workspace/hooks";
 import { timeAgo } from "@multica/core/utils";
-import { ContentEditor, type ContentEditorRef, copyMarkdown, ReadonlyContent, useFileDropZone, FileDropOverlay, useDownloadAttachment, useAttachmentPreview, isPreviewable } from "../../editor";
+import { ContentEditor, type ContentEditorRef, copyMarkdown, ReadonlyContent, useFileDropZone, FileDropOverlay, useDownloadAttachment, useAttachmentPreview, AttachmentBlock } from "../../editor";
 import { FileUploadButton } from "@multica/ui/components/common/file-upload-button";
 import { useFileUpload } from "@multica/core/hooks/use-file-upload";
 import { api } from "@multica/core/api";
@@ -64,7 +64,7 @@ interface CommentCardProps {
    */
   canModerate?: boolean;
   onReply: (parentId: string, content: string, attachmentIds?: string[]) => Promise<void>;
-  onEdit: (commentId: string, content: string) => Promise<void>;
+  onEdit: (commentId: string, content: string, attachmentIds?: string[]) => Promise<void>;
   onDelete: (commentId: string) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
   /** Toggle the resolved state on the thread root. Only invoked for root entries. */
@@ -121,8 +121,7 @@ function DeleteCommentDialog({
 // Standalone attachment list — renders attachments not already in the markdown
 // ---------------------------------------------------------------------------
 
-function AttachmentList({ attachments, content, className }: { attachments?: Attachment[]; content?: string; className?: string }) {
-  const { t } = useT("editor");
+export function AttachmentList({ attachments, content, className }: { attachments?: Attachment[]; content?: string; className?: string }) {
   const download = useDownloadAttachment();
   const preview = useAttachmentPreview();
   if (!attachments?.length) return null;
@@ -150,35 +149,15 @@ function AttachmentList({ attachments, content, className }: { attachments?: Att
   return (
     <div className={cn("flex flex-col gap-1", className)}>
       {standalone.map((a) => (
-        <div
+        <AttachmentBlock
           key={a.id}
-          className="flex items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1 transition-colors hover:bg-muted"
-        >
-          <FileText className="size-4 shrink-0 text-muted-foreground" />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm">{a.filename}</p>
-          </div>
-          {isPreviewable(a.content_type, a.filename) && (
-            <button
-              type="button"
-              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-              title={t(($) => $.attachment.preview)}
-              aria-label={t(($) => $.attachment.preview)}
-              onClick={() => preview.tryOpen(a)}
-            >
-              <Eye className="size-3.5" />
-            </button>
-          )}
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            title={t(($) => $.image.download)}
-            aria-label={t(($) => $.image.download)}
-            onClick={() => download(a.id)}
-          >
-            <Download className="size-3.5" />
-          </button>
-        </div>
+          filename={a.filename}
+          contentType={a.content_type}
+          attachmentId={a.id}
+          href={a.url}
+          onPreview={() => preview.tryOpen({ kind: "full", attachment: a })}
+          onDownload={() => download(a.id)}
+        />
       ))}
       {preview.modal}
     </div>
@@ -202,7 +181,7 @@ function CommentRow({
   entry: TimelineEntry;
   currentUserId?: string;
   canModerate?: boolean;
-  onEdit: (commentId: string, content: string) => Promise<void>;
+  onEdit: (commentId: string, content: string, attachmentIds?: string[]) => Promise<void>;
   onDelete: (commentId: string) => void;
   onToggleReaction: (commentId: string, emoji: string) => void;
 }) {
@@ -212,6 +191,20 @@ function CommentRow({
   const editEditorRef = useRef<ContentEditorRef>(null);
   const cancelledRef = useRef(false);
   const { uploadWithToast } = useFileUpload(api);
+  // Pending uploads from this edit pass. Merged with `entry.attachments` so
+  // newly uploaded text/code files get an Eye button in the edit-mode editor;
+  // the active subset is sent as `attachmentIds` on save so the server binds
+  // them to the comment (otherwise they'd remain orphaned at the issue level
+  // and disappear after refresh).
+  const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
+  const editorAttachments = pendingAttachments.length > 0
+    ? [...(entry.attachments ?? []), ...pendingAttachments]
+    : entry.attachments;
+  const handleEditUpload = useCallback(async (file: File) => {
+    const result = await uploadWithToast(file, { issueId });
+    if (result) setPendingAttachments((prev) => [...prev, result]);
+    return result;
+  }, [uploadWithToast, issueId]);
   const { isDragOver, dropZoneProps } = useFileDropZone({
     onDrop: (files) => files.forEach((f) => editEditorRef.current?.uploadFile(f)),
     enabled: editing,
@@ -247,6 +240,7 @@ function CommentRow({
   const cancelEdit = () => {
     cancelledRef.current = true;
     setEditing(false);
+    setPendingAttachments([]);
     clearEditDraft(editDraftKey);
   };
 
@@ -258,15 +252,24 @@ function CommentRow({
       .trim();
     if (!trimmed || trimmed === (entry.content ?? "").trim()) {
       setEditing(false);
+      setPendingAttachments([]);
       clearEditDraft(editDraftKey);
       return;
     }
+    const activeIds = pendingAttachments
+      .filter((a) => trimmed.includes(a.url))
+      .map((a) => a.id);
     try {
-      await onEdit(entry.id, trimmed);
+      await onEdit(entry.id, trimmed, activeIds.length > 0 ? activeIds : undefined);
       setEditing(false);
+      setPendingAttachments([]);
       clearEditDraft(editDraftKey);
-    } catch {
-      toast.error(t(($) => $.comment.update_failed));
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : t(($) => $.comment.update_failed),
+      );
     }
   };
 
@@ -361,10 +364,10 @@ function CommentRow({
                 else clearEditDraft(editDraftKey);
               }}
               onSubmit={saveEdit}
-              onUploadFile={(file) => uploadWithToast(file, { issueId })}
+              onUploadFile={handleEditUpload}
               debounceMs={100}
               currentIssueId={issueId}
-              attachments={entry.attachments}
+              attachments={editorAttachments}
             />
           </div>
           <div className="flex items-center justify-between mt-2">
@@ -429,6 +432,16 @@ function CommentCardImpl({
   const [editing, setEditing] = useState(false);
   const editEditorRef = useRef<ContentEditorRef>(null);
   const cancelledRef = useRef(false);
+  // Pending uploads from the root-comment edit pass — same rationale as CommentRow.
+  const [parentPendingAttachments, setParentPendingAttachments] = useState<Attachment[]>([]);
+  const parentEditorAttachments = parentPendingAttachments.length > 0
+    ? [...(entry.attachments ?? []), ...parentPendingAttachments]
+    : entry.attachments;
+  const handleParentEditUpload = useCallback(async (file: File) => {
+    const result = await uploadWithToast(file, { issueId });
+    if (result) setParentPendingAttachments((prev) => [...prev, result]);
+    return result;
+  }, [uploadWithToast, issueId]);
   const { isDragOver: parentDragOver, dropZoneProps: parentDropZoneProps } = useFileDropZone({
     onDrop: (files) => files.forEach((f) => editEditorRef.current?.uploadFile(f)),
     enabled: editing,
@@ -461,6 +474,7 @@ function CommentCardImpl({
   const cancelEdit = () => {
     cancelledRef.current = true;
     setEditing(false);
+    setParentPendingAttachments([]);
     clearParentEditDraft(parentEditDraftKey);
   };
 
@@ -472,15 +486,24 @@ function CommentCardImpl({
       .trim();
     if (!trimmed || trimmed === (entry.content ?? "").trim()) {
       setEditing(false);
+      setParentPendingAttachments([]);
       clearParentEditDraft(parentEditDraftKey);
       return;
     }
+    const activeIds = parentPendingAttachments
+      .filter((a) => trimmed.includes(a.url))
+      .map((a) => a.id);
     try {
-      await onEdit(entry.id, trimmed);
+      await onEdit(entry.id, trimmed, activeIds.length > 0 ? activeIds : undefined);
       setEditing(false);
+      setParentPendingAttachments([]);
       clearParentEditDraft(parentEditDraftKey);
-    } catch {
-      toast.error(t(($) => $.comment.update_failed));
+    } catch (err) {
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : t(($) => $.comment.update_failed),
+      );
     }
   };
 
@@ -639,10 +662,10 @@ function CommentCardImpl({
                       else clearParentEditDraft(parentEditDraftKey);
                     }}
                     onSubmit={saveEdit}
-                    onUploadFile={(file) => uploadWithToast(file, { issueId })}
+                    onUploadFile={handleParentEditUpload}
                     debounceMs={100}
                     currentIssueId={issueId}
-                    attachments={entry.attachments}
+                    attachments={parentEditorAttachments}
                   />
                 </div>
                 <div className="flex items-center justify-between mt-2">

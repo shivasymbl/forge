@@ -17,88 +17,54 @@
 import { Node, mergeAttributes } from "@tiptap/core";
 import { ReactNodeViewRenderer, NodeViewWrapper } from "@tiptap/react";
 import type { NodeViewProps } from "@tiptap/react";
-import { Eye, FileText, Loader2, Download } from "lucide-react";
-import { useT } from "../../i18n";
+import { FILE_CARD_URL_PATTERN } from "@multica/ui/markdown";
 import { useAttachmentDownloadResolver } from "../attachment-download-context";
 import { useAttachmentPreview } from "../attachment-preview-modal";
-import { isPreviewable } from "../utils/preview";
+import { AttachmentBlock } from "../attachment-block";
 
+const FILE_CARD_MARKDOWN_RE = new RegExp(
+  `^!file\\[([^\\]]*)\\]\\((${FILE_CARD_URL_PATTERN.source})\\)`,
+);
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 // ---------------------------------------------------------------------------
 // React NodeView
 // ---------------------------------------------------------------------------
 
-function FileCardView({ node }: NodeViewProps) {
-  const { t } = useT("editor");
+export function FileCardView({ node }: NodeViewProps) {
   const href = (node.attrs.href as string) || "";
   const filename = (node.attrs.filename as string) || "";
   const uploading = node.attrs.uploading as boolean;
   const { openByUrl, resolveAttachment } = useAttachmentDownloadResolver();
   const preview = useAttachmentPreview();
 
-  const openFile = () => {
-    openByUrl(href);
-  };
-
-  // The NodeView only holds href + filename. The full Attachment (with
-  // content_type / download_url) lives in the surrounding
-  // AttachmentDownloadProvider — resolve it lazily at click time so the
-  // eye button is only offered when we both know the record and the
-  // dispatcher recognizes the type.
+  // Preview gate widens to "anything that can be downloaded AND whose
+  // filename is a previewable type". Media kinds remain previewable when the
+  // attachment record isn't reachable (e.g. URL was copy-pasted across
+  // comments). Text kinds (markdown / html / text) need the id because the
+  // preview proxy is ID-keyed.
   const attachment = href ? resolveAttachment(href) : undefined;
-  const previewable = attachment
-    ? isPreviewable(attachment.content_type, attachment.filename)
-    : false;
+
+  const openPreview = () => {
+    if (attachment) {
+      preview.tryOpen({ kind: "full", attachment });
+    } else if (href) {
+      preview.tryOpen({ kind: "url", url: href, filename });
+    }
+  };
 
   return (
     <NodeViewWrapper as="div" className="file-card-node" data-type="fileCard">
-      <div
-        className="my-1 flex items-center gap-2 rounded-md border border-border bg-muted/50 px-2.5 py-1 transition-colors hover:bg-muted"
-        contentEditable={false}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {uploading ? (
-          <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-        ) : (
-          <FileText className="size-4 shrink-0 text-muted-foreground" />
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm">{uploading ? t(($) => $.file_card.uploading, { filename }) : filename}</p>
-        </div>
-        {!uploading && href && previewable && attachment && (
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            title={t(($) => $.attachment.preview)}
-            aria-label={t(($) => $.attachment.preview)}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              preview.tryOpen(attachment);
-            }}
-          >
-            <Eye className="size-3.5" />
-          </button>
-        )}
-        {!uploading && href && (
-          <button
-            type="button"
-            className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            title={t(($) => $.image.download)}
-            aria-label={t(($) => $.image.download)}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              openFile();
-            }}
-          >
-            <Download className="size-3.5" />
-          </button>
-        )}
+      <div contentEditable={false}>
+        <AttachmentBlock
+          filename={filename}
+          contentType={attachment?.content_type ?? ""}
+          attachmentId={attachment?.id}
+          href={href}
+          uploading={uploading}
+          onPreview={openPreview}
+          onDownload={() => openByUrl(href)}
+        />
       </div>
       {preview.modal}
     </NodeViewWrapper>
@@ -172,7 +138,7 @@ export const FileCardExtension = Node.create({
       return src.search(/^!file\[/m);
     },
     tokenize(src: string) {
-      const match = src.match(/^!file\[([^\]]*)\]\((https?:\/\/[^)]+)\)/);
+      const match = src.match(FILE_CARD_MARKDOWN_RE);
       if (!match) return undefined;
       return {
         type: "fileCard",

@@ -92,6 +92,9 @@ check "2.8 runtime-detail-page: non-admin redirect" \
 check "2.9 app-sidebar: Create workspace gated by isWorkspaceAdmin" \
   "grep -q 'isWorkspaceAdmin' packages/views/layout/app-sidebar.tsx"
 
+check "2.10 agents-page: Browse Templates button present and gated (isAdmin)" \
+  "grep -q 'showTemplateBrowser\|TemplateBrowserModal' packages/views/agents/components/agents-page.tsx"
+
 echo ""
 
 # ── 3. Infrastructure ─────────────────────────────────────────────────────────
@@ -209,9 +212,8 @@ check "8.5 Slack DeleteSlackIntegration is soft-delete (DisableSlackIntegration)
 check "8.6 Slack hook wired in notification_listeners (NotifyStatusChange)" \
   "grep -q 'slack.NotifyStatusChange' server/cmd/server/notification_listeners.go"
 
-check "8.7 Slack routes have admin RBAC gate" \
-  "grep -q 'integrations/slack' server/cmd/server/router.go && \
-   grep -q 'RequireWorkspaceRole' server/cmd/server/router.go"
+check "8.7 Slack routes have admin RBAC gate (co-located, not just co-present)" \
+  "grep -A3 'integrations/slack' server/cmd/server/router.go | grep -q 'RequireWorkspaceRole'"
 
 check "8.8 Slack TestSlackIntegration uses detached context for DB writes" \
   "grep -q 'context.Background.*3.*Second\|statusCtx' server/internal/handler/slack_integration.go"
@@ -222,13 +224,19 @@ check "8.9 Slack useTestSlackIntegration invalidates query on success" \
 check "8.10 Slack history returned in GET response (soft-delete audit trail)" \
   "grep -q 'ListSlackIntegrationHistoryForWorkspace\|history' server/internal/handler/slack_integration.go"
 
+check "8.11 Slack migration 089 contains workspace_slack_integrations DDL" \
+  "grep -q 'CREATE TABLE.*workspace_slack_integrations' server/migrations/089_workspace_slack_integrations.up.sql"
+
+check "8.12 Slack migration 090 references correct FK target (user table)" \
+  "grep -q 'REFERENCES \"user\"' server/migrations/090_slack_created_by_fk_fix.up.sql"
+
 echo ""
 
 # ── 9. Agent Templates ────────────────────────────────────────────────────────
 echo "[ 9 ] Agent Templates"
 
-check "9.1 Template registry has at least 26 templates" \
-  "ls server/internal/agenttmpl/templates/*.json | wc -l | xargs -I{} test {} -ge 26"
+check "9.1 Template registry has at least 40 templates (12 Asymbl + 25 upstream v0.3.x + 3 generic)" \
+  "ls server/internal/agenttmpl/templates/*.json | wc -l | xargs -I{} test {} -ge 40"
 
 check "9.2 Finance Analyst template exists" \
   "test -f server/internal/agenttmpl/templates/finance-analyst.json"

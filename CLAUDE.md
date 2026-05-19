@@ -399,7 +399,9 @@ This repo is Asymbl's self-hosted fork of multica-ai/multica. The following rule
 ```bash
 bash scripts/verify-patches.sh   # must exit 0 before any upstream cherry-pick lands
 ```
-Never `git merge upstream/main` — always cherry-pick individual commits and re-verify.
+For large syncs (> 20 upstream commits): `git checkout -b sync/upstream-vX.Y.Z && git merge upstream/main`, resolve conflicts in known patched files, then `bash scripts/verify-patches.sh`.
+For small patches (< 20 commits): `git cherry-pick <sha>` then `bash scripts/verify-patches.sh`.
+Both v0.2.32 (222 commits) and v0.3.2 (149 commits) syncs were merge commits — merge is the proven approach for large syncs.
 Full sync procedure in `docs/fork-patches.md`.
 
 ### RBAC rules — DO NOT remove these gates without security review

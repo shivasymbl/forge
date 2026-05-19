@@ -50,77 +50,76 @@ See CLAUDE.md for the complete command reference.
 <claude-mem-context>
 # Memory Context
 
-# [Multica] recent context, 2026-05-05 1:03am GMT+5:30
+# [Multica] recent context, 2026-05-19 2:14pm GMT+5:30
 
 Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
 Format: ID TIME TYPE TITLE
 Fetch details: get_observations([IDs]) | Search: mem-search skill
 
-Stats: 50 obs (17,439t read) | 861,680t work | 98% savings
+Stats: 50 obs (20,155t read) | 2,417,526t work | 99% savings
 
-### May 1, 2026
-S3451 Push RBAC implementation to trigger CI/CD deployment to production (May 1 at 11:41 PM)
-S3453 Complete RBAC implementation to restrict agent creation and runtime management to admin/owner roles, verify all security gaps are closed, and deploy to production (May 1 at 11:41 PM)
-### May 2, 2026
-S3455 Investigate existing release workflow configuration for desktop app packaging (May 2 at 9:44 AM)
-9696 9:46a 🔵 shivasymbl/forge repository has no GitHub Actions workflow runs
-9697 9:47a 🔵 shivasymbl/forge uses Depot CI exclusively, not GitHub Actions
-9698 " 🔵 RBAC deployment completed via Depot - two builds finished in under 40 seconds
-9699 9:48a 🔵 RBAC deployment verified live in production - containers running sha-a863ede
-9700 9:50a 🔵 electron-builder.yml disables DMG signing but enables notarization - conflicting configuration
-S3456 Research Depot CI tag trigger configuration to understand why v0.2.23 tag didn't trigger release workflow (May 2 at 9:50 AM)
-9701 9:52a 🔵 package.mjs script dynamically disables notarization when Apple credentials absent
-9702 " ✅ Switched desktop release runner from Depot to GitHub-hosted macOS
-9703 9:53a 🔴 Fixed invalid depot-macos-latest runner label in release workflow
-9704 " 🔵 Repository version tags at v0.2.22 - next release would be v0.2.23
-9705 9:54a 🔵 Tag v0.2.23 pushed successfully, triggering release workflow with CLI and desktop jobs
-9706 " 🔵 Release workflow not yet visible - v0.2.23 release not created after 60+ seconds
-9707 9:55a 🔵 Repository has two separate release workflow files - .depot vs .github
-9708 9:56a 🔵 shivasymbl/forge repository has no GitHub Actions workflows - uses Depot CI exclusively
-9709 " 🔵 Final confirmation - shivasymbl/forge has zero GitHub Actions runs, only v0.1.0 release exists
-S3457 Complete investigation of RBAC deployment and release workflow architecture, discovering why v0.2.23 tag didn't trigger automated release (May 2 at 9:56 AM)
-9710 9:57a 🔵 Depot CI supports tag push triggers - on.push.tags NOT in unsupported events list
-9711 9:58a 🔵 Depot CI lacks CLI commands to list workflow runs - only individual run status check available
-9712 " 🔵 shivasymbl/forge is a fork with GitHub Actions enabled but zero workflow runs
-9713 9:59a 🔵 GitHub Actions workflows exist and are active but configured for Depot CI - zero GitHub Actions runs
-9714 " 🔵 .github/workflows files are stubs pointing to Depot CI - real workflows in .depot/workflows
-S3458 Search for existing Depot CI skills or documentation in user's skill library (May 2 at 9:59 AM)
-S3459 Research Depot CI tag trigger configuration and event handling (May 2 at 10:00 AM)
-S3464 Fix failed v0.2.26 release workflow - macOS DMG build failing on Depot CI due to platform incompatibility (May 2 at 10:00 AM)
-9716 10:01a ✅ Workflow change committed and pushed to main
-9717 " 🔴 Local macOS DMG build succeeded, produced 4 files
-9719 10:23a 🔵 DMG upload to release did not complete after 15 seconds
-9720 10:25a 🔵 DMG upload auto-backgrounded despite synchronous invocation
-9721 " 🔵 DMG upload fails with HTTP 404 on GitHub releases API
-9722 " 🔴 Release v0.2.26 is finalized production release, not draft
-9723 10:26a 🔴 DMG upload succeeded with explicit GH_TOKEN authentication
-S3463 Fix failed v0.2.26 release workflow - macOS DMG build failing on Depot CI due to platform incompatibility (May 2 at 10:26 AM)
-S3465 Fix failed v0.2.26 release workflow - macOS DMG build failing on Depot CI due to platform incompatibility (May 2 at 10:27 AM)
-### May 5, 2026
-13192 1:00a 🔴 Corrected UI token usage for accessibility and surface consistency
-13193 " ✅ Updated active navigation state token
-13194 " ✅ Modified chat window background token
-13195 " 🔵 SKILL.md file not found in coderabbit plugin cache
-13196 " 🔵 Located coderabbit SKILL.md in an alternate cache path
-13198 " 🔵 Retrieved coderabbit SKILL.md content
-13200 " ✅ Updated project status and progress tracking
-13201 " ✅ Integrated Asymbl Brand Style Guide into UI tokens and fonts
-13202 " ✅ Updated CI script for patch verification
-13203 " ✅ Updated AGENTS.md with new command reference
-13204 " ✅ Updated fork-patches.md with new category and items
-13205 " 🔵 Reviewed recent Git commit history
-13207 " ✅ Refined brand tokens and font application in UI components
-13210 1:01a ✅ Updated sidebar styling and active item states
-13211 " ✅ Updated sidebar and chat window styling for brand consistency
-13212 " ✅ Updated sidebar styling and active item states
-13215 " ✅ Updated CSS variables for sidebar colors
-13216 " ✅ Refined sidebar navigation item styling
-13217 " ✅ Updated chat window container styling
-13221 " 🔵 Identified usage of 'text-muted-foreground' and related classes
-13222 " 🔵 Identified usage of sidebar and muted foreground classes
-13227 " ✅ Reverted sidebar and brand color tokens to previous values
-13230 1:02a ✅ Updated styling for draggable pinned sidebar items
-13232 " ✅ Updated chat window and message list component structures and styling
+### May 14, 2026
+S4670 Summarize progress on Slack integration fixes and related database engineering findings. (May 14 at 11:57 AM)
+S4672 Summarize CI results and recent Git operations. (May 14 at 12:14 PM)
+S4693 Create and deploy Finance, Business Analyst, and Project Manager agent templates. (May 14 at 12:31 PM)
+54491 12:49p 🔵 Agent Template Handler Files
+54499 " 🔵 Agent Template Package Location
+54489 " 🔵 Agent Template Schema Search
+54504 " 🔵 Agent Template Definitions and Loading Logic
+54507 " 🔵 Agent Template Examples: Full-Stack Engineer and Planner
+54512 " 🔵 Writing Agent Templates: Article Writer and Docs Writer
+54571 12:50p 🔵 Skills Directory Contents in `anthropics/skills`
+54577 " 🔵 Skill Descriptions for Document Manipulation
+54583 " 🔵 Skills Directory Contents in `obra/superpowers-skills`
+54591 " 🔵 Sub-skills within `obra/superpowers-skills` Categories
+54593 " 🔵 Sub-skill Categories in `obra/superpowers-skills`
+54598 " 🔵 Contents of Anthropic Skills Directories
+54604 12:51p 🔵 Anthropic Skill Descriptions (SKILL.md)
+54609 " 🔵 Superpowers Skills Descriptions (SKILL.md)
+54613 " 🔵 Superpowers Skills Descriptions (SKILL.md) - Remaining Skills
+54617 " 🔵 Claude Agent Skills for Finance, Tax, SaaS, and Document Workflows
+54570 " 🔵 Skills Directory Structure in `obra/superpowers-skills`
+54623 12:52p 🔵 Claude Agent Skills for Business Analysis Tasks
+54627 " 🔵 Claude Agent Skills for Project Management
+54631 " 🔵 Contents of Anthropic Financial Services Plugins Directory
+54642 " 🔵 Claude Skills for Indian GST and ITR Filing
+54651 12:53p 🔵 Contents of Anthropic Financial Services Plugins Subdirectories
+54658 " 🔵 Skill Importer Logic in skill.go
+54664 " 🔴 Finance Analyst Agent Template Created
+54670 12:54p 🔴 Business Analyst Agent Template Created
+54685 " 🔵 Finance Plugin SKILL.md Descriptions
+54695 " 🔵 File Structure of Financial Services Plugins
+54704 " 🔵 Claude Plugin Metadata for Finance Agents
+54716 " 🔵 File Structure of Model-Builder Skills and PM Skills Repository
+54723 12:55p 🔵 Financial Model Skills and PM Skills Structure
+54729 " 🔵 Project Management Skills from Phuryn Repository
+54736 " 🔵 Key Project Management Skill Descriptions
+54677 12:56p 🔵 Contents of Anthropic Financial Services Plugins Directory
+S4701 Summarize progress on Asymbl agent template development and CI status. (May 14 at 1:03 PM)
+S4703 Summarize progress on Asymbl agent template development, CI status, and skill repository access. (May 14 at 1:35 PM)
+S4705 Summarize progress on Asymbl agent template development, CI status, and private skill access verification. (May 14 at 1:37 PM)
+S4713 Summarize Anthropic finance plugin inventory and recommend Asymbl templates (May 14 at 1:38 PM)
+S4716 Summarize progress on Finance team's skills and plan for automation. (May 14 at 1:43 PM)
+S4736 Summarize progress on infrastructure issues and template creation. (May 14 at 1:48 PM)
+S4761 Summarize progress on CI checks and code state after recent commits. (May 14 at 5:38 PM)
+### May 19, 2026
+102886 2:04p 🔵 Current Git Status and Remotes Identified
+102877 " ⚖️ Adopted Git Merge for Upstream Sync Over Cherry-Picking
+102878 " ⚖️ Local Testing of Migrations Before Production Deployment
+102879 " 🔵 Migration Version Key Mismatch Identified
+102880 " ✅ Conflict Resolution Strategy for Key Files
+102881 " 🟣 Addition of "Browse Templates" Button for Agents
+102882 " ✅ Update to `verify-patches.sh` for Template Count
+102883 " ✅ Documentation Update for Merge Policy
+102884 " ✅ Enhanced Migration SQL Content Verification
+102885 " 🔴 Resolved Migration Key Collision Issue
+102887 2:05p 🔵 Migration Runner Logic Examined
+102889 " 🔵 Patch Verification Script Examined
+102890 " 🔵 CLAUDE.md Documentation Reviewed
+102892 " 🔵 Patch Verification Script - Test Infrastructure and Summary
+102894 " 🔵 CLAUDE.md - Forge Fork Rules
+102895 " 🔵 Migrations Directory Resolution and File Handling
+102888 2:06p 🔵 Docker Entrypoint Script Analyzed
 
-Access 862k tokens of past work via get_observations([IDs]) or mem-search skill.
+Access 2418k tokens of past work via get_observations([IDs]) or mem-search skill.
 </claude-mem-context>

@@ -174,7 +174,7 @@ func TestPrepareWithProjectResources(t *testing.T) {
 	defer env.Cleanup(true)
 
 	// resources.json should exist and decode back to what we wrote.
-	resourcesPath := filepath.Join(env.WorkDir, ".forge", "project", "resources.json")
+	resourcesPath := filepath.Join(env.WorkDir, ".multica", "project", "resources.json")
 	raw, err := os.ReadFile(resourcesPath)
 	if err != nil {
 		t.Fatalf("failed to read resources.json: %v", err)
@@ -216,7 +216,7 @@ func TestPrepareWithProjectResources(t *testing.T) {
 		"GitHub repo",
 		"https://github.com/multica-ai/multica",
 		"default branch: `main`",
-		".forge/project/resources.json",
+		".multica/project/resources.json",
 	} {
 		if !strings.Contains(s, want) {
 			t.Errorf("CLAUDE.md missing %q", want)
@@ -272,7 +272,7 @@ func TestWriteProjectResourcesSkippedWhenNone(t *testing.T) {
 	if err := writeProjectResources(dir, TaskContextForEnv{}); err != nil {
 		t.Fatalf("writeProjectResources: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(dir, ".forge", "project", "resources.json")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(dir, ".multica", "project", "resources.json")); !os.IsNotExist(err) {
 		t.Errorf("expected no resources.json to be written when project context is empty")
 	}
 }
@@ -572,7 +572,7 @@ func TestInjectRuntimeConfigClaude(t *testing.T) {
 
 	s := string(content)
 	for _, want := range []string{
-		"Forge Agent Runtime",
+		"Multica Agent Runtime",
 		"forge issue get",
 		"forge issue comment list",
 		"Go Conventions",
@@ -585,30 +585,68 @@ func TestInjectRuntimeConfigClaude(t *testing.T) {
 	}
 }
 
-// Regression test for #2347: the runtime config injected into agent harnesses
-// must advertise both autopilot execution modes on create AND update, so an
-// agent acting as a CLI user is not confined to create_issue.
-func TestInjectRuntimeConfigAutopilotAdvertisesBothModes(t *testing.T) {
+func TestInjectRuntimeConfigAvailableCommandsCoreOnly(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 
-	if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{IssueID: "issue-1"}); err != nil {
+	if _, err := InjectRuntimeConfig(dir, "codex", TaskContextForEnv{IssueID: "issue-1"}); err != nil {
 		t.Fatalf("InjectRuntimeConfig failed: %v", err)
 	}
 
-	content, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
 	if err != nil {
-		t.Fatalf("failed to read CLAUDE.md: %v", err)
+		t.Fatalf("failed to read AGENTS.md: %v", err)
 	}
 
 	s := string(content)
 	for _, want := range []string{
-		"forge autopilot create --title \"...\" --agent <name> --mode create_issue|run_only",
-		"forge autopilot update <id>",
-		"[--mode create_issue|run_only]",
+		"## Available Commands",
+		"core agent loop and common issue create/update tasks",
+		"`forge <command> --help`",
+		"forge issue get <id> --output json",
+		"forge issue comment list <issue-id>",
+		"forge issue create --title",
+		"forge issue update <id>",
+		"--description-file <path>",
+		"--parent \"\"",
+		"forge repo checkout <url>",
+		"forge issue status <id> <status>",
+		"forge issue comment add <issue-id>",
+		"forge issue comment add --help",
 	} {
 		if !strings.Contains(s, want) {
-			t.Errorf("CLAUDE.md missing %q", want)
+			t.Errorf("AGENTS.md missing core command/help text %q\n---\n%s", want, s)
+		}
+	}
+
+	for _, banned := range []string{
+		"forge issue list [--status",
+		"forge issue label list",
+		"forge issue subscriber list",
+		"forge label list",
+		"forge workspace members",
+		"forge agent list",
+		"forge squad list",
+		"forge issue runs",
+		"forge issue run-messages",
+		"forge attachment download",
+		"forge autopilot list",
+		"forge autopilot create",
+		"forge autopilot update",
+		"forge autopilot trigger",
+		"forge autopilot delete",
+		"forge project get",
+		"forge project resource list",
+		"forge issue assign",
+		"forge issue label add",
+		"forge issue label remove",
+		"forge issue subscriber add",
+		"forge issue subscriber remove",
+		"forge issue comment delete",
+		"forge label create",
+	} {
+		if strings.Contains(s, banned) {
+			t.Errorf("AGENTS.md should not inject non-core command %q\n---\n%s", banned, s)
 		}
 	}
 }
@@ -633,7 +671,7 @@ func TestInjectRuntimeConfigGemini(t *testing.T) {
 
 	s := string(content)
 	for _, want := range []string{
-		"Forge Agent Runtime",
+		"Multica Agent Runtime",
 		"forge issue get",
 		"Writing",
 	} {
@@ -670,7 +708,7 @@ func TestInjectRuntimeConfigCodex(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Forge Agent Runtime") {
+	if !strings.Contains(s, "Multica Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -695,7 +733,7 @@ func TestInjectRuntimeConfigNoSkills(t *testing.T) {
 
 	s := string(content)
 	if !strings.Contains(s, "forge issue get") {
-		t.Error("should reference forge CLI even without skills")
+		t.Error("should reference multica CLI even without skills")
 	}
 	if strings.Contains(s, "## Skills") {
 		t.Error("should not have Skills section when there are no skills")
@@ -802,6 +840,58 @@ func TestWriteContextFilesOpencodeNativeSkills(t *testing.T) {
 	}
 }
 
+// OpenClaw's native skill scanner reads {workspaceDir}/skills/. The daemon
+// pairs writeContextFiles with a per-task synthesized openclaw-config.json
+// (see openclaw_config.go) that pins agents.defaults.workspace to workDir,
+// so writing skills to {workDir}/skills/ is what the CLI actually scans.
+// This test pins the post-MUL-2219 write path; the previous fallback into
+// .agent_context/skills/ was a dead drop the openclaw scanner never read.
+func TestWriteContextFilesOpenclawNativeSkills(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	ctx := TaskContextForEnv{
+		IssueID: "openclaw-skill-test",
+		AgentSkills: []SkillContextForEnv{
+			{
+				Name:    "Go Conventions",
+				Content: "Follow Go conventions.",
+				Files: []SkillFileContextForEnv{
+					{Path: "templates/example.go", Content: "package main"},
+				},
+			},
+		},
+	}
+
+	if err := writeContextFiles(dir, "openclaw", ctx); err != nil {
+		t.Fatalf("writeContextFiles failed: %v", err)
+	}
+
+	skillMd, err := os.ReadFile(filepath.Join(dir, "skills", "go-conventions", "SKILL.md"))
+	if err != nil {
+		t.Fatalf("failed to read skills/go-conventions/SKILL.md: %v", err)
+	}
+	if !strings.Contains(string(skillMd), "Follow Go conventions.") {
+		t.Error("SKILL.md missing content")
+	}
+
+	supportFile, err := os.ReadFile(filepath.Join(dir, "skills", "go-conventions", "templates", "example.go"))
+	if err != nil {
+		t.Fatalf("failed to read supporting file: %v", err)
+	}
+	if string(supportFile) != "package main" {
+		t.Errorf("supporting file content = %q, want %q", string(supportFile), "package main")
+	}
+
+	// The pre-MUL-2219 fallback path must NOT be written: openclaw never scans it.
+	if _, err := os.Stat(filepath.Join(dir, ".agent_context", "skills")); !os.IsNotExist(err) {
+		t.Error(".agent_context/skills/ MUST NOT be written for openclaw — the scanner does not read that path")
+	}
+	if _, err := os.Stat(filepath.Join(dir, ".openclaw", "skills")); !os.IsNotExist(err) {
+		t.Error(".openclaw/skills/ MUST NOT be written — openclaw never scans that path; writing there is a dead drop")
+	}
+}
+
 func TestWriteContextFilesKiroNativeSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -849,7 +939,7 @@ func TestInjectRuntimeConfigOpencode(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Forge Agent Runtime") {
+	if !strings.Contains(s, "Multica Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -884,7 +974,7 @@ func TestInjectRuntimeConfigKiro(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Forge Agent Runtime") {
+	if !strings.Contains(s, "Multica Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -983,7 +1073,7 @@ func TestInjectRuntimeConfigRequiresExplicitCommentPost(t *testing.T) {
 			}
 			s := string(data)
 
-			// The workflow must contain an explicit `multica issue comment add`
+			// The workflow must contain an explicit `forge issue comment add`
 			// invocation for this issue — not just a prose mention of posting.
 			mustContain := []string{
 				"forge issue comment add issue-1",
@@ -1010,20 +1100,19 @@ func TestInjectRuntimeConfigRequiresExplicitCommentPost(t *testing.T) {
 	}
 }
 
-// TestInjectRuntimeConfigAvailableCommandsIsNeutral pins that the global
-// Available Commands section lists the three input modes neutrally for
-// every non-Codex provider on every host OS, with no "MUST pipe via stdin"
-// mandate.
+// TestInjectRuntimeConfigAvailableCommandsIsNeutral pins that the core
+// Available Commands section lists comment input modes neutrally for every
+// non-Codex provider on every host OS, with no "MUST pipe via stdin" mandate.
 //
 // Background: #1795 / #1851 introduced "MUST pipe via stdin" /
 // `--description-stdin` directives in the global section to fix Codex's
 // habit of emitting literal `\n` inside `--content "..."` (MUL-1467).
-// That mandate landed in the all-provider section and ended up steering
-// every provider at stdin — which then broke non-ASCII bytes on Windows
-// shells (#2198 / #2236 / #2376). This rollback keeps the strong
-// Codex-specific mandate in the Codex-Specific section (pinned by
-// TestInjectRuntimeConfigCodexLinuxEmphasizesStdin) and leaves the global
-// section neutral.
+// That mandate landed in the all-provider section and ended up steering every
+// provider at stdin — which then broke non-ASCII bytes on Windows shells
+// (#2198 / #2236 / #2376). This rollback keeps the strong Codex-specific
+// mandate in the Codex-Specific section (pinned by
+// TestInjectRuntimeConfigCodexLinuxEmphasizesStdin) and leaves the core global
+// command entry neutral.
 //
 // Not parallel: mutates the package-level runtimeGOOS.
 func TestInjectRuntimeConfigAvailableCommandsIsNeutral(t *testing.T) {
@@ -1054,11 +1143,9 @@ func TestInjectRuntimeConfigAvailableCommandsIsNeutral(t *testing.T) {
 
 				// Available Commands lists all three input modes as fact.
 				for _, want := range []string{
-					"`--content \"...\"`",
-					"`--content-stdin`",
-					"`--content-file <path>`",
-					"`--description-stdin`",
-					"`--description-file <path>`",
+					"--content \"...\"",
+					"--content-stdin",
+					"--content-file <path>",
 				} {
 					if !strings.Contains(s, want) {
 						t.Errorf("%s missing flag mention %q\n---\n%s", configFile, want, s)
@@ -1160,6 +1247,39 @@ func TestInjectRuntimeConfigCodexWindowsUsesContentFile(t *testing.T) {
 	}
 }
 
+func TestInjectRuntimeConfigQuickCreateOutputPrefixAgnostic(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+
+	ctx := TaskContextForEnv{QuickCreatePrompt: "create a task"}
+	if _, err := InjectRuntimeConfig(dir, "codex", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
+	if err != nil {
+		t.Fatalf("read AGENTS.md: %v", err)
+	}
+	s := string(data)
+
+	for _, want := range []string{
+		"quick-create task",
+		"Created <identifier-or-id>: <title>",
+		"identifier` from JSON output",
+		"Do not assume any workspace issue prefix",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("quick-create runtime config missing %q\n---\n%s", want, s)
+		}
+	}
+	for _, absent := range []string{
+		"Created MUL-<n>",
+	} {
+		if strings.Contains(s, absent) {
+			t.Errorf("quick-create runtime config should not contain %q\n---\n%s", absent, s)
+		}
+	}
+}
+
 func TestInjectRuntimeConfigAutopilotRunOnlyNoIssueWorkflow(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -1239,7 +1359,7 @@ func TestInjectRuntimeConfigHermes(t *testing.T) {
 	}
 
 	s := string(content)
-	if !strings.Contains(s, "Forge Agent Runtime") {
+	if !strings.Contains(s, "Multica Agent Runtime") {
 		t.Error("AGENTS.md missing meta skill header")
 	}
 	if !strings.Contains(s, "Coding") {
@@ -1866,7 +1986,7 @@ func TestReuseRestoresCodexHome(t *testing.T) {
 	}
 
 	// Reuse should restore CodexHome.
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{IssueID: "reuse-test"}, testLogger())
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{IssueID: "reuse-test"}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -1916,7 +2036,7 @@ func TestReuseRestoresCodexPluginCache(t *testing.T) {
 		t.Fatalf("remove codex plugins dir: %v", err)
 	}
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{IssueID: "reuse-plugin-test"}, testLogger())
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{IssueID: "reuse-plugin-test"}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -1954,7 +2074,7 @@ func TestReuseWritesMissingCodexWorkspaceSkills(t *testing.T) {
 		t.Fatalf("remove codex skills dir: %v", err)
 	}
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{
 		IssueID: "reuse-skill-test",
 		AgentSkills: []SkillContextForEnv{
 			{
@@ -1963,7 +2083,7 @@ func TestReuseWritesMissingCodexWorkspaceSkills(t *testing.T) {
 				Files:   []SkillFileContextForEnv{{Path: "examples/example.md", Content: "Example"}},
 			},
 		},
-	}, testLogger())
+	}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -2013,7 +2133,7 @@ func TestReuseUpdatesCodexWorkspaceSkills(t *testing.T) {
 	}
 	defer env.Cleanup(true)
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{
 		IssueID: "reuse-skill-update-test",
 		AgentSkills: []SkillContextForEnv{
 			{
@@ -2022,7 +2142,7 @@ func TestReuseUpdatesCodexWorkspaceSkills(t *testing.T) {
 				Files:   []SkillFileContextForEnv{{Path: "examples/example.md", Content: "Updated example"}},
 			},
 		},
-	}, testLogger())
+	}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -2280,9 +2400,9 @@ func TestReuseSeedsUserSkillUpdates(t *testing.T) {
 		t.Fatalf("update user SKILL.md: %v", err)
 	}
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{
 		IssueID: "user-skill-reuse-test",
-	}, testLogger())
+	}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -2335,12 +2455,12 @@ func TestReuseClearsUserSkillResidueOnWorkspaceConflict(t *testing.T) {
 		t.Fatalf("user support file should be seeded in round 1: %v", err)
 	}
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{
 		IssueID: "reuse-conflict-test",
 		AgentSkills: []SkillContextForEnv{
 			{Name: "Writing", Content: "workspace writing"},
 		},
-	}, testLogger())
+	}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -2397,9 +2517,9 @@ func TestReuseClearsRemovedUserSkill(t *testing.T) {
 		t.Fatalf("remove user skill: %v", err)
 	}
 
-	reused := Reuse(env.WorkDir, "codex", "", TaskContextForEnv{
+	reused := Reuse(ReuseParams{WorkDir: env.WorkDir, Provider: "codex", Task: TaskContextForEnv{
 		IssueID: "reuse-remove-test",
-	}, testLogger())
+	}}, testLogger())
 	if reused == nil {
 		t.Fatal("Reuse returned nil")
 	}
@@ -2627,4 +2747,185 @@ func TestInjectRuntimeConfigMentionLoopHardening(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestInjectRuntimeConfigSquadLeaderCommentTriggeredNoAction verifies that
+// when IsSquadLeader is true and the task is comment-triggered, the generated
+// CLAUDE.md explicitly forbids posting comments that merely announce no_action.
+// This is the fix for MUL-2168 — squad leaders were posting "Exiting silently"
+// comments because the comment-triggered path lacked the prohibition.
+func TestInjectRuntimeConfigSquadLeaderCommentTriggeredNoAction(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	ctx := TaskContextForEnv{
+		IssueID:          "issue-1",
+		TriggerCommentID: "comment-1",
+		IsSquadLeader:    true,
+	}
+	if _, err := InjectRuntimeConfig(dir, "claude", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	s := string(data)
+
+	// The comment-triggered workflow must contain the squad leader no_action rule.
+	for _, want := range []string{
+		"Squad leader rule",
+		"DO NOT post any comment",
+		"forge squad activity",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("squad leader comment-triggered CLAUDE.md missing %q", want)
+		}
+	}
+
+	// The Output section must use strong prohibition language.
+	if !strings.Contains(s, "you MUST exit without posting any comment") {
+		t.Errorf("Output section missing strong prohibition for squad leader no_action")
+	}
+
+	// Non-squad-leader should NOT have the squad leader rule in comment-triggered path.
+	dir2 := t.TempDir()
+	ctx2 := TaskContextForEnv{
+		IssueID:          "issue-1",
+		TriggerCommentID: "comment-1",
+		IsSquadLeader:    false,
+	}
+	if _, err := InjectRuntimeConfig(dir2, "claude", ctx2); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data2, err := os.ReadFile(filepath.Join(dir2, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	s2 := string(data2)
+	if strings.Contains(s2, "Squad leader rule") {
+		t.Errorf("non-squad-leader CLAUDE.md should NOT contain squad leader rule")
+	}
+}
+
+// TestInjectRuntimeConfigCommentTriggerThreadFirstReads locks in MUL-2387:
+// the runtime config's comment-triggered Workflow section must steer the
+// agent at the thread-aware reads from PR #2787 first (--thread anchored on
+// the trigger comment id, then --recent N with the stderr cursor for
+// pagination) rather than the legacy "dump the whole comment list" recipe.
+// The Available Commands core line also has to surface the new flags so the
+// agent has a single place to discover them.
+func TestInjectRuntimeConfigCommentTriggerThreadFirstReads(t *testing.T) {
+	t.Parallel()
+
+	const (
+		issueID   = "issue-thread-1"
+		triggerID = "trigger-comment-1"
+	)
+	dir := t.TempDir()
+	ctx := TaskContextForEnv{
+		IssueID:          issueID,
+		TriggerCommentID: triggerID,
+	}
+	if _, err := InjectRuntimeConfig(dir, "claude", ctx); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	s := string(data)
+
+	// Workflow step 2 must read the trigger's thread with --thread anchored
+	// on the exact trigger comment id from this task.
+	for _, want := range []string{
+		"--thread " + triggerID,
+		"forge issue comment list " + issueID + " --thread " + triggerID + " --output json",
+		// --recent fallback at the documented default N=20.
+		"forge issue comment list " + issueID + " --recent 20 --output json",
+		// Cursor walks via the stderr line the CLI emits, not invented flags.
+		"Next thread cursor:",
+		"--before",
+		"--before-id",
+		// --since is still available and combinable.
+		"--since",
+		"may combine with `--thread` or `--recent`",
+		// Explicit pushback on the legacy full-dump recipe so the model has
+		// no reason to fall back to it on long issues.
+		"Avoid the unfiltered",
+		"wastes context",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("comment-triggered Workflow missing %q\n---\n%s", want, s)
+		}
+	}
+
+	// Available Commands core line must surface the new flags (this is the
+	// single discovery point for non-workflow CLI use cases).
+	for _, want := range []string{
+		"[--thread <comment-id>",
+		"--recent N [--before <ts> --before-id <root-id>]",
+		"Next thread cursor:",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("Available Commands core line missing %q\n---\n%s", want, s)
+		}
+	}
+
+	// The legacy step-2 phrasing this PR replaces must not regress.
+	if strings.Contains(s, "read the conversation (returns all comments, capped server-side at 2000)") {
+		t.Errorf("comment-triggered Workflow still carries the legacy full-dump phrasing\n---\n%s", s)
+	}
+}
+
+// TestInjectRuntimeConfigAssignmentTriggerMentionsRecent pins that the
+// assignment-triggered Workflow keeps full-history reading as the mandatory
+// default (the agent must still ingest earlier comments — that rule was
+// added in MUL-1124) but ALSO points at `--recent N` as the long-issue
+// alternative. Without this, the prompt would still be the only place
+// telling the agent about --recent on busy issues.
+func TestInjectRuntimeConfigAssignmentTriggerMentionsRecent(t *testing.T) {
+	t.Parallel()
+
+	dir := t.TempDir()
+	if _, err := InjectRuntimeConfig(dir, "claude", TaskContextForEnv{IssueID: "issue-1"}); err != nil {
+		t.Fatalf("InjectRuntimeConfig failed: %v", err)
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md"))
+	if err != nil {
+		t.Fatalf("read CLAUDE.md: %v", err)
+	}
+	s := string(data)
+
+	// Mandatory full-history rule (MUL-1124) must stay.
+	for _, want := range []string{
+		"forge issue comment list issue-1 --output json",
+		"this is mandatory, not optional",
+		"Skipping this step is the most common cause",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("assignment Workflow regressed mandatory-history rule, missing %q\n---\n%s", want, s)
+		}
+	}
+	// AND --recent must be offered as the long-issue alternative.
+	for _, want := range []string{
+		"--recent 20 --output json",
+		"Next thread cursor:",
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("assignment Workflow missing --recent guidance %q\n---\n%s", want, s)
+		}
+	}
+	// The previous wording framed `--recent` as a replacement ("you may
+	// switch to ..."), which conflicts with the mandatory full-history
+	// rule. Pin that the replacement semantics never reappears — `--recent`
+	// is a paging strategy, not a shortcut.
+	for _, banned := range []string{
+		"you may switch to",
+		"switch to `--recent",
+	} {
+		if strings.Contains(s, banned) {
+			t.Errorf("assignment Workflow regressed to replacement-style --recent phrasing %q\n---\n%s", banned, s)
+		}
+	}
 }

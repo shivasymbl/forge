@@ -31,12 +31,14 @@ import { onInboxNew, onInboxInvalidate, onInboxIssueStatusChanged, onInboxIssueD
 import { inboxKeys } from "../inbox/queries";
 import { notificationPreferenceOptions } from "../notification-preferences/queries";
 import { workspaceKeys, workspaceListOptions } from "../workspace/queries";
+import type { Workspace } from "../types/workspace";
 import { chatKeys } from "../chat/queries";
 import { useChatStore } from "../chat";
 import { resolvePostAuthDestination, useHasOnboarded } from "../paths";
 import type {
   MemberAddedPayload,
   WorkspaceDeletedPayload,
+  WorkspaceUpdatedPayload,
   MemberRemovedPayload,
   IssueUpdatedPayload,
   IssueCreatedPayload,
@@ -107,6 +109,60 @@ export function applyChatDoneToCache(
   qc.invalidateQueries({ queryKey: chatKeys.pendingTask(sessionId) });
 }
 
+/**
+ * Apply a workspace:updated event to the cache. Always refreshes the
+ * workspace list. If the incoming `issue_prefix` differs from what's
+ * currently cached, also invalidates issueKeys.all for that workspace,
+ * since every issue's rendered identifier (`MUL-123`) is recomputed from
+ * the workspace prefix at read time. Without this, the UI keeps showing
+ * the old `OLD-N` keys until the next hard refresh.
+ *
+ * If the workspace isn't in the cached list (first observation), we
+ * conservatively invalidate — the prefix is effectively "new" relative to
+ * what's cached, so any issues already loaded under the old prefix would
+ * be stale anyway.
+ */
+export function applyWorkspaceUpdatedToCache(
+  qc: QueryClient,
+  payload: WorkspaceUpdatedPayload,
+): void {
+  const next = payload.workspace;
+  if (next?.id) {
+    const cached =
+      qc
+        .getQueryData<Workspace[]>(workspaceKeys.list())
+        ?.find((w) => w.id === next.id) ?? null;
+    if (!cached || cached.issue_prefix !== next.issue_prefix) {
+      qc.invalidateQueries({ queryKey: issueKeys.all(next.id) });
+    }
+  }
+  qc.invalidateQueries({ queryKey: workspaceKeys.list() });
+}
+
+/**
+ * Invalidates all workspace-scoped queries. Used after reconnect and when a
+ * new WSClient instance is detected (workspace switch) to recover events
+ * missed while disconnected.
+ */
+function invalidateWorkspaceScopedQueries(qc: QueryClient): void {
+  const wsId = getCurrentWsId();
+  if (wsId) {
+    qc.invalidateQueries({ queryKey: issueKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: inboxKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
+    qc.invalidateQueries({ queryKey: workspaceKeys.members(wsId) });
+    qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
+    qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
+    qc.invalidateQueries({ queryKey: projectKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: autopilotKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: agentTaskSnapshotKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: agentActivityKeys.all(wsId) });
+    qc.invalidateQueries({ queryKey: agentRunCountsKeys.all(wsId) });
+  }
+  qc.invalidateQueries({ queryKey: workspaceKeys.list() });
+}
+
 export interface RealtimeSyncStores {
   authStore: UseBoundStore<StoreApi<AuthState>>;
 }
@@ -154,12 +210,24 @@ export function useRealtimeSync(
       },
       agent: () => {
         const wsId = getCurrentWsId();
-        if (wsId) qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
+        if (wsId) {
+          qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
+          // Squad members status is derived per agent, so any agent
+          // change (status flip, archive, runtime swap) needs to refresh
+          // the per-squad members-status cache. Prefix-matches both the
+          // squad list and every squadMemberStatus query.
+          qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
+        }
       },
       member: () => {
         const wsId = getCurrentWsId();
         if (wsId) qc.invalidateQueries({ queryKey: workspaceKeys.members(wsId) });
       },
+      // workspace:updated is handled by the specific handler below
+      // (compares prefixes to decide whether to also invalidate issues).
+      // This generic fallback still fires for workspace:deleted (paired
+      // with the specific navigation handler) and any future workspace:*
+      // events without dedicated handlers.
       workspace: () => {
         qc.invalidateQueries({ queryKey: workspaceKeys.list() });
       },
@@ -197,7 +265,14 @@ export function useRealtimeSync(
       },
       daemon: () => {
         const wsId = getCurrentWsId();
-        if (wsId) qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
+        if (wsId) {
+          qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
+          // Runtime online/offline transitions move the derived status
+          // for every agent that hosts on this runtime, which shifts the
+          // working/idle/offline pill on the squad page. Same prefix
+          // invalidation pattern as the agent handler above.
+          qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
+        }
       },
       autopilot: () => {
         const wsId = getCurrentWsId();
@@ -239,6 +314,14 @@ export function useRealtimeSync(
         // every list-of-tasks query stale" so cache stays fresh even
         // when the relevant component isn't currently mounted.
         qc.invalidateQueries({ queryKey: ["issues", "tasks"] });
+        // Per-issue token usage card (issue-detail right rail). Same
+        // shape as the tasks invalidation above — any task lifecycle
+        // event shifts the aggregated usage numbers.
+        qc.invalidateQueries({ queryKey: ["issues", "usage"] });
+        // Squad members-status reads the same task lifecycle to flip
+        // working ↔ idle for each agent member. Prefix-matches every
+        // mounted squad-page's members-status query in O(1).
+        qc.invalidateQueries({ queryKey: workspaceKeys.squads(wsId) });
       },
     };
 
@@ -257,6 +340,7 @@ export function useRealtimeSync(
 
     // Event types handled by specific handlers below -- skip generic refresh
     const specificEvents = new Set([
+      "workspace:updated",
       "issue:updated", "issue:created", "issue:deleted", "issue_labels:changed", "inbox:new",
       "comment:created", "comment:updated", "comment:deleted",
       "comment:resolved", "comment:unresolved",
@@ -493,6 +577,10 @@ export function useRealtimeSync(
         window.location.assign(target);
       }
     };
+
+    const unsubWsUpdated = ws.on("workspace:updated", (p) => {
+      applyWorkspaceUpdatedToCache(qc, p as WorkspaceUpdatedPayload);
+    });
 
     const unsubWsDeleted = ws.on("workspace:deleted", (p) => {
       const { workspace_id } = p as WorkspaceDeletedPayload;
@@ -803,6 +891,7 @@ export function useRealtimeSync(
       unsubIssueReactionRemoved();
       unsubSubscriberAdded();
       unsubSubscriberRemoved();
+      unsubWsUpdated();
       unsubWsDeleted();
       unsubMemberRemoved();
       unsubMemberAdded();
@@ -833,26 +922,30 @@ export function useRealtimeSync(
     const unsub = ws.onReconnect(async () => {
       logger.info("reconnected, refetching all data");
       try {
-        const wsId = getCurrentWsId();
-        if (wsId) {
-          qc.invalidateQueries({ queryKey: issueKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: inboxKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
-          qc.invalidateQueries({ queryKey: workspaceKeys.members(wsId) });
-          qc.invalidateQueries({ queryKey: workspaceKeys.skills(wsId) });
-          qc.invalidateQueries({ queryKey: projectKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: runtimeKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: autopilotKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: agentTaskSnapshotKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: agentActivityKeys.all(wsId) });
-          qc.invalidateQueries({ queryKey: agentRunCountsKeys.all(wsId) });
-        }
-        qc.invalidateQueries({ queryKey: workspaceKeys.list() });
+        invalidateWorkspaceScopedQueries(qc);
       } catch (e) {
         logger.error("reconnect refetch failed", e);
       }
     });
 
     return unsub;
+  }, [ws, qc]);
+
+  // New WSClient instance (workspace switch) -> invalidate workspace-scoped
+  // queries to recover events missed while the previous instance was torn down.
+  // Skips the initial assignment to avoid a redundant refetch on first mount.
+  const wsInstanceRef = useRef<WSClient | null>(null);
+  useEffect(() => {
+    if (!ws) return;
+    if (wsInstanceRef.current === null) {
+      // First non-null instance — store and skip invalidation.
+      wsInstanceRef.current = ws;
+      return;
+    }
+    if (wsInstanceRef.current === ws) return;
+    wsInstanceRef.current = ws;
+
+    logger.info("new WSClient instance detected, invalidating workspace queries");
+    invalidateWorkspaceScopedQueries(qc);
   }, [ws, qc]);
 }

@@ -188,6 +188,21 @@ check "7.8 web layout has no multica.ai metadataBase" \
 check "7.9 web layout has no multica_hq twitter handle" \
   "! grep -q 'multica_hq' apps/web/app/layout.tsx"
 
+check "7.10 404 page button says Back to Forge not Multica" \
+  "grep -q 'Back to Forge' apps/web/app/not-found.tsx"
+
+check "7.11 agent issue_context Quick Start uses forge CLI not multica" \
+  "grep -q 'forge issue get' server/internal/daemon/execenv/context.go"
+
+check "7.12 daemon auth error uses forge login not multica login" \
+  "grep -q 'forge login' server/internal/daemon/daemon.go"
+
+check "7.13 AGENTS.md runtime header is Forge Agent Runtime" \
+  "grep -q 'Forge Agent Runtime' server/internal/daemon/execenv/runtime_config.go"
+
+check "7.14 prompt.go workspace is Forge not Multica" \
+  "grep -q 'Forge workspace' server/internal/daemon/prompt.go"
+
 echo ""
 
 # ── 8. Slack Integration ──────────────────────────────────────────────────────

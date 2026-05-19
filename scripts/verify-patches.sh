@@ -92,6 +92,9 @@ check "2.8 runtime-detail-page: non-admin redirect" \
 check "2.9 app-sidebar: Create workspace gated by isWorkspaceAdmin" \
   "grep -q 'isWorkspaceAdmin' packages/views/layout/app-sidebar.tsx"
 
+check "2.10 agents-page: Browse Templates button present and gated (isAdmin)" \
+  "grep -q 'showTemplateBrowser\|TemplateBrowserModal' packages/views/agents/components/agents-page.tsx"
+
 echo ""
 
 # ── 3. Infrastructure ─────────────────────────────────────────────────────────

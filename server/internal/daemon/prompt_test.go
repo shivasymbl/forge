@@ -34,7 +34,7 @@ func TestBuildQuickCreatePromptRules(t *testing.T) {
 		// use custom issue prefixes, so a successful issue creation should
 		// not look failed merely because the identifier does not match one
 		// fixed prefix.
-		"multica issue create --output json",
+		"forge issue create --output json",
 		"JSON response",
 		"identifier",
 		"Do not scrape human output",
@@ -59,7 +59,7 @@ func TestBuildQuickCreatePromptRules(t *testing.T) {
 func TestBuildQuickCreatePromptAssigneeIncludesSquads(t *testing.T) {
 	out := buildQuickCreatePrompt(Task{QuickCreatePrompt: "fix the login button color"})
 	mustContain := []string{
-		"multica squad list",
+		"forge squad list",
 		"Squads are first-class assignees",
 		"Treat bare @-routing as an assignee directive",
 		"让 @独立团 review 这个 PR",
@@ -223,7 +223,7 @@ func TestBuildPromptCommentTriggerPromotesThreadReads(t *testing.T) {
 	mustContain := []string{
 		// Thread-first read pinned by trigger comment id.
 		"--thread " + triggerID,
-		"`multica issue comment list " + issueID + " --thread " + triggerID + " --output json`",
+		"`forge issue comment list " + issueID + " --thread " + triggerID + " --output json`",
 		// --recent fallback uses the documented default N=20.
 		"--recent 20 --output json",
 		// Cursor walks via the stderr line the CLI emits, not invented flags.

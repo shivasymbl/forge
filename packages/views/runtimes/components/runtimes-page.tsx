@@ -99,10 +99,7 @@ export function RuntimesPage({
 
   const myRole = members.find((m) => m.user_id === currentUserId)?.role ?? null;
   const isAdmin = myRole === "owner" || myRole === "admin";
-  if (!isAdmin && myRole !== null) {
-    navigation.push("/");
-    return null;
-  }
+
   const [machineFilter, setMachineFilter] =
     useState<RuntimeMachineFilter>("all");
   const [machineSearch, setMachineSearch] = useState("");
@@ -137,6 +134,13 @@ export function RuntimesPage({
 
   const updatableIds = useUpdatableRuntimeIds(wsId);
   const now = useNowTick();
+
+  // RBAC: non-admins are redirected once role is known.
+  // Must come after all hooks — React hooks cannot be called conditionally.
+  if (!isAdmin && myRole !== null) {
+    navigation.push("/");
+    return null;
+  }
 
   const workloadIndex = useMemo(
     () => buildWorkloadIndex(agents, snapshot),

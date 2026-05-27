@@ -500,14 +500,6 @@ export function ManualCreatePanel({
                 align="start"
               />
 
-              {/* Start date */}
-              <StartDatePicker
-                startDate={startDate}
-                onUpdate={(u) => updateStartDate(u.start_date ?? null)}
-                triggerRender={<PillButton />}
-                align="start"
-              />
-
               {/* Due date */}
               <DueDatePicker
                 dueDate={dueDate}

@@ -293,6 +293,17 @@ check "10.2 Flaky auth cache test uses dedicated DB constant" \
 
 echo ""
 
+# ── 11. Deployment Invariants ─────────────────────────────────────────────────
+echo "[ 11 ] Deployment Invariants"
+
+check "11.1 entrypoint.sh runs backfill_task_usage_hourly before migrate" \
+  "grep -q 'backfill_task_usage_hourly' docker/entrypoint.sh"
+
+check "11.2 entrypoint.sh runs migrate before server" \
+  "grep -q './migrate up' docker/entrypoint.sh"
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "=== Results: $PASS passed, $FAIL failed ==="
 echo ""

@@ -135,13 +135,6 @@ export function RuntimesPage({
   const updatableIds = useUpdatableRuntimeIds(wsId);
   const now = useNowTick();
 
-  // RBAC: non-admins are redirected once role is known.
-  // Must come after all hooks — React hooks cannot be called conditionally.
-  if (!isAdmin && myRole !== null) {
-    navigation.push("/");
-    return null;
-  }
-
   const workloadIndex = useMemo(
     () => buildWorkloadIndex(agents, snapshot),
     [agents, snapshot],
@@ -189,6 +182,13 @@ export function RuntimesPage({
     const nextId = local?.id ?? filteredMachines[0]?.id ?? null;
     if (nextId !== selectedMachineId) setSelectedMachineId(nextId);
   }, [filteredMachines, selectedMachineId]);
+
+  // RBAC: non-admins redirected once role is known. All hooks above are
+  // unconditional — this return is after the last hook call.
+  if (!isAdmin && myRole !== null) {
+    navigation.push("/");
+    return null;
+  }
 
   const selectedMachine =
     machines.find((machine) => machine.id === selectedMachineId) ??

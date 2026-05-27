@@ -166,6 +166,9 @@ check "7.1 co-authored-by hook: forge-agent identity" \
 check "7.2 co-authored-by hook: no multica-agent in hook script" \
   "! grep -q 'multica-agent <github@multica.ai>' server/internal/daemon/repocache/cache.go"
 
+check "7.2b github-tab UI shows forge-agent not multica-agent" \
+  "grep -q 'forge-agent <github@asymbl.com>' packages/views/settings/components/github-tab.tsx"
+
 check "7.3 desktop app.setName is Forge" \
   "grep -q 'app.setName(\"Forge\")' apps/desktop/src/main/index.ts"
 

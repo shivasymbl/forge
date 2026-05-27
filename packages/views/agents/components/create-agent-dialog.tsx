@@ -62,10 +62,10 @@ export function CreateAgentDialog({
   // Skills are copied separately by the caller after createAgent
   // succeeds — they're not part of CreateAgentRequest.
   template?: Agent | null;
-  // When provided, the dialog opens in "From template" mode: name,
-  // description, and instructions are pre-filled from the agenttmpl
-  // catalog entry. Skills are materialized server-side by
-  // createAgentFromTemplate — they're not shown in the form.
+  // When set (and template is null), the dialog opens pre-populated from
+  // a curated agent template — name, description, and instructions are
+  // seeded from the template detail. Skills are attached server-side by
+  // createAgentFromTemplate, so SkillMultiSelect is hidden in this mode.
   templateSeed?: Pick<AgentTemplate, "name" | "description" | "instructions"> | null;
   // When set, every successful create is followed by
   // addSquadMember(squadId, agent) so the new agent joins this squad.
@@ -86,18 +86,25 @@ export function CreateAgentDialog({
   const queryClient = useQueryClient();
   const wsId = useWorkspaceId();
 
-  // Name defaults: duplicate appends " copy", template seed uses template name, blank otherwise.
+  // Name defaults: duplicate uses "<original> copy". Template-create seeds
+  // from the template name. Manual-create starts blank.
   const [name, setName] = useState(
-    template ? `${template.name}${t(($) => $.create_dialog.duplicate_copy_suffix)}`
-    : templateSeed ? templateSeed.name
-    : "",
+    template
+      ? `${template.name}${t(($) => $.create_dialog.duplicate_copy_suffix)}`
+      : templateSeed
+        ? templateSeed.name
+        : "",
   );
-  const [description, setDescription] = useState(template?.description ?? templateSeed?.description ?? "");
+  const [description, setDescription] = useState(
+    template?.description ?? templateSeed?.description ?? "",
+  );
   const [visibility, setVisibility] = useState<AgentVisibility>(
     template?.visibility ?? "workspace",
   );
   const [model, setModel] = useState(template?.model ?? "");
-  const [instructions, setInstructions] = useState(template?.instructions ?? templateSeed?.instructions ?? "");
+  const [instructions, setInstructions] = useState(
+    template?.instructions ?? templateSeed?.instructions ?? "",
+  );
   const [avatarUrl, setAvatarUrl] = useState<string | null>(template?.avatar_url ?? null);
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(
     () => new Set(template?.skills.map((s) => s.id) ?? []),
@@ -175,17 +182,15 @@ export function CreateAgentDialog({
       };
       if (template) {
         // Duplicate path: forward the hidden config fields the source
-        // agent had so the clone is functional out of the box (env / args
-        // / concurrency). Skills now flow through the dialog form, so we
-        // don't blindly carry template.skills here anymore — the form's
-        // selectedSkillIds is the source of truth.
+        // agent had so the clone is functional out of the box (args /
+        // concurrency). Skills flow through the dialog form. As of
+        // MUL-2600 the agent resource shape no longer carries
+        // custom_env values, so duplication cannot copy env at all —
+        // the user has to re-set env on the clone via the env tab
+        // (which now goes through the audited `/env` endpoint). The
+        // dialog's create call still accepts custom_env at create
+        // time, but the source values aren't available here.
         if (template.custom_args.length) data.custom_args = template.custom_args;
-        if (
-          !template.custom_env_redacted &&
-          Object.keys(template.custom_env).length > 0
-        ) {
-          data.custom_env = template.custom_env;
-        }
         if (template.max_concurrent_tasks) {
           data.max_concurrent_tasks = template.max_concurrent_tasks;
         }
@@ -232,8 +237,8 @@ export function CreateAgentDialog({
   const headerTitle = isDuplicate
     ? t(($) => $.create_dialog.title_duplicate)
     : isFromTemplate
-    ? `${t(($) => $.create_dialog.title_create)} · ${templateSeed!.name}`
-    : t(($) => $.create_dialog.title_create);
+      ? `${t(($) => $.create_dialog.title_create)} · ${templateSeed!.name}`
+      : t(($) => $.create_dialog.title_create);
 
   return (
     <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -369,11 +374,7 @@ export function CreateAgentDialog({
               }
             />
 
-            {/* Hide skill picker when creating from a template — skills are
-                attached server-side by createAgentFromTemplate. Showing the
-                picker would let the user add skills, triggering a post-create
-                setAgentSkills call that replaces all template skills. */}
-            {!templateSeed && (
+            {!isFromTemplate && (
               <SkillMultiSelect
                 selectedIds={selectedSkillIds}
                 onChange={setSelectedSkillIds}

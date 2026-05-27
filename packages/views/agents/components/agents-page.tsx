@@ -6,7 +6,6 @@ import {
   ArrowLeft,
   ArrowUpDown,
   Bot,
-  LayoutTemplate,
   Plus,
   Search,
 } from "lucide-react";
@@ -16,7 +15,6 @@ import type { Agent, AgentRuntime, AgentTemplate, AgentTemplateSummary, CreateAg
 import {
   type AgentAvailability,
   agentRunCounts30dOptions,
-  agentTemplateListOptions,
   summarizeActivityWindow,
   useWorkspaceActivityMap,
   useWorkspacePresenceMap,
@@ -33,6 +31,7 @@ import {
   workspaceKeys,
 } from "@multica/core/workspace/queries";
 import { runtimeListOptions } from "@multica/core/runtimes";
+import { agentTemplateListOptions, agentTemplateDetailOptions } from "@multica/core/agents/queries";
 import { Button } from "@multica/ui/components/ui/button";
 import {
   Dialog,
@@ -95,10 +94,10 @@ export function AgentsPage() {
     error: listError,
     refetch: refetchList,
   } = useQuery(agentListOptions(wsId));
-  const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: runtimes = [], isLoading: runtimesLoading } = useQuery(
     runtimeListOptions(wsId),
   );
+  const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: runCountsRaw = [] } = useQuery(agentRunCounts30dOptions(wsId));
 
   // Single source of truth for derived agent state. The hook owns the
@@ -125,11 +124,10 @@ export function AgentsPage() {
   const [duplicateTemplate, setDuplicateTemplate] = useState<Agent | null>(
     null,
   );
-  // Browse Templates flow: slug drives createAgentFromTemplate; detail is fetched
-  // imperatively before opening the dialog so instructions are ready immediately.
+  // Template browser state
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
-  const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<AgentTemplate | null>(null);
+  const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<Pick<AgentTemplate, "name" | "description" | "instructions"> | null>(null);
 
   const runtimesById = useMemo(() => {
     const m = new Map<string, AgentRuntime>();
@@ -297,24 +295,30 @@ export function AgentsPage() {
   }, [view, archivedCount]);
 
   const handleCreate = async (data: CreateAgentRequest): Promise<Agent> => {
-    let agent: Agent;
     if (selectedTemplateSlug) {
       const result = await api.createAgentFromTemplate({
         template_slug: selectedTemplateSlug,
         name: data.name,
         runtime_id: data.runtime_id,
-        model: data.model,
         visibility: data.visibility,
+        model: data.model,
         description: data.description,
-        // Forward user edits to instructions and avatar so pre-filled
-        // form changes aren't silently discarded.
-        instructions: data.instructions ?? undefined,
-        avatar_url: data.avatar_url ?? undefined,
+        instructions: data.instructions,
+        avatar_url: data.avatar_url,
       });
-      agent = result.agent;
-    } else {
-      agent = await api.createAgent(data);
+      const agent = result.agent;
+      setSelectedTemplateSlug(null);
+      setSelectedTemplateDetail(null);
+      qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
+      navigation.push(paths.agentDetail(agent.id));
+      return agent;
     }
+    const agent = await api.createAgent(data);
+    // Skill follow-up is now owned by the dialog (it reads the user's
+    // form selection, which already includes the duplicate source's
+    // skills as a default when applicable). The dialog will call
+    // setAgentSkills after we return; we just have to surface the
+    // created agent so it can.
     qc.setQueryData<Agent[]>(workspaceKeys.agents(wsId), (current = []) => {
       const exists = current.some((a) => a.id === agent.id);
       return exists
@@ -323,8 +327,6 @@ export function AgentsPage() {
     });
     setShowCreate(false);
     setDuplicateTemplate(null);
-    setSelectedTemplateSlug(null);
-    setSelectedTemplateDetail(null);
     navigation.push(paths.agentDetail(agent.id));
     qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
     return agent;
@@ -390,7 +392,7 @@ export function AgentsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-1 min-h-0 flex-col">
-        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} onBrowseTemplates={() => setShowTemplateBrowser(true)} isAdmin={isWorkspaceAdmin} />
+        <PageHeaderBar totalCount={0} onCreate={() => setShowCreate(true)} />
         <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
@@ -425,14 +427,14 @@ export function AgentsPage() {
       <PageHeaderBar
         totalCount={totalActiveCount}
         onCreate={() => setShowCreate(true)}
-        onBrowseTemplates={() => setShowTemplateBrowser(true)}
         isAdmin={isWorkspaceAdmin}
+        onBrowseTemplates={() => setShowTemplateBrowser(true)}
       />
 
       <div className="flex flex-1 min-h-0 flex-col gap-4 p-6">
         {showEmpty ? (
           <div className="flex flex-1 items-center justify-center">
-            <EmptyState onCreate={() => setShowCreate(true)} isAdmin={isWorkspaceAdmin} />
+            <EmptyState onCreate={() => setShowCreate(true)} />
           </div>
         ) : (
           <div className="flex flex-1 min-h-0 flex-col overflow-hidden rounded-lg border bg-background">
@@ -488,7 +490,7 @@ export function AgentsPage() {
           members={members}
           currentUserId={currentUser?.id ?? null}
           template={duplicateTemplate}
-          templateSeed={selectedTemplateDetail ?? null}
+          templateSeed={selectedTemplateDetail}
           onClose={() => {
             setShowCreate(false);
             setDuplicateTemplate(null);
@@ -498,44 +500,35 @@ export function AgentsPage() {
           onCreate={handleCreate}
         />
       )}
-
-      <TemplateBrowserModal
-        open={showTemplateBrowser}
-        onClose={() => setShowTemplateBrowser(false)}
-        onSelect={async (tmpl) => {
-          setShowTemplateBrowser(false);
-          setSelectedTemplateSlug(tmpl.slug);
-          try {
-            // Fetch full detail before opening dialog so instructions are pre-filled
-            const detail = await api.getAgentTemplate(tmpl.slug);
+      {showTemplateBrowser && (
+        <TemplateBrowserModal
+          onClose={() => setShowTemplateBrowser(false)}
+          onSelect={(slug, detail) => {
+            setSelectedTemplateSlug(slug);
             setSelectedTemplateDetail(detail);
+            setShowTemplateBrowser(false);
             setShowCreate(true);
-          } catch {
-            // Clear stale slug so a subsequent New Agent click doesn't
-            // accidentally submit as createAgentFromTemplate.
-            setSelectedTemplateSlug(null);
-            setSelectedTemplateDetail(null);
-          }
-        }}
-      />
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Page header — icon + title + count + create CTAs.
+// Page header — icon + title + count + create CTA. Unchanged.
 // ---------------------------------------------------------------------------
 
 function PageHeaderBar({
   totalCount,
   onCreate,
-  onBrowseTemplates,
   isAdmin,
+  onBrowseTemplates,
 }: {
   totalCount: number;
   onCreate: () => void;
-  onBrowseTemplates: () => void;
-  isAdmin: boolean;
+  isAdmin?: boolean;
+  onBrowseTemplates?: () => void;
 }) {
   const { t } = useT("agents");
   return (
@@ -552,7 +545,7 @@ function PageHeaderBar({
         <p className="ml-2 hidden text-xs text-muted-foreground md:block">
           {t(($) => $.page.tagline)}{" "}
           <a
-            href="https://forge.asymbl.app/docs/agents"
+            href="https://multica.ai/docs/agents"
             target="_blank"
             rel="noopener noreferrer"
             className="underline decoration-muted-foreground/30 underline-offset-4 transition-colors hover:text-foreground"
@@ -562,90 +555,17 @@ function PageHeaderBar({
         </p>
       </div>
       <div className="flex items-center gap-2">
-        {isAdmin && (
+        {isAdmin && onBrowseTemplates && (
           <Button type="button" size="sm" variant="outline" onClick={onBrowseTemplates}>
-            <LayoutTemplate className="h-3 w-3" />
             {t(($) => $.template_browser.button)}
           </Button>
         )}
-        <Button type="button" size="sm" onClick={onCreate} disabled={!isAdmin}>
+        <Button type="button" size="sm" onClick={onCreate}>
           <Plus className="h-3 w-3" />
           {t(($) => $.page.new_agent)}
         </Button>
       </div>
     </PageHeader>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Template browser modal — lists all agenttmpl templates grouped by category.
-// ---------------------------------------------------------------------------
-
-function TemplateBrowserModal({
-  open,
-  onClose,
-  onSelect,
-}: {
-  open: boolean;
-  onClose: () => void;
-  onSelect: (template: AgentTemplateSummary) => void;
-}) {
-  const { t } = useT("agents");
-  const { data: templates = [], isLoading } = useQuery(agentTemplateListOptions());
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, AgentTemplateSummary[]>();
-    for (const tmpl of templates) {
-      const cat = tmpl.category ?? "General";
-      const list = map.get(cat) ?? [];
-      list.push(tmpl);
-      map.set(cat, list);
-    }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [templates]);
-
-  return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <LayoutTemplate className="h-4 w-4" />
-            {t(($) => $.template_browser.title)}
-          </DialogTitle>
-        </DialogHeader>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">
-            {t(($) => $.template_browser.loading)}
-          </div>
-        ) : (
-          <div className="space-y-6 pt-2">
-            {grouped.map(([category, items]) => (
-              <div key={category}>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">{category}</p>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {items.map((tmpl) => (
-                    <button
-                      key={tmpl.slug}
-                      type="button"
-                      onClick={() => onSelect(tmpl)}
-                      className="group flex flex-col gap-1 rounded-lg border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-accent"
-                    >
-                      <span className="text-sm font-medium leading-snug">{tmpl.name}</span>
-                      <span className="line-clamp-2 text-xs text-muted-foreground">{tmpl.description}</span>
-                      {tmpl.skills.length > 0 && (
-                        <span className="mt-1 text-[10px] text-muted-foreground/70">
-                          {t(($) => $.template_browser.skill_count, { count: tmpl.skills.length })}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -661,7 +581,7 @@ function ListError({
   const { t } = useT("agents");
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <PageHeaderBar totalCount={0} onCreate={onCreate} onBrowseTemplates={() => {}} isAdmin={false} />
+      <PageHeaderBar totalCount={0} onCreate={onCreate} />
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
         <AlertCircle className="h-8 w-8 text-destructive" />
         <div>
@@ -962,13 +882,7 @@ function ArchivedToolbarRow({
 // Empty / no-matches states
 // ---------------------------------------------------------------------------
 
-function EmptyState({
-  onCreate,
-  isAdmin,
-}: {
-  onCreate: () => void;
-  isAdmin: boolean;
-}) {
+function EmptyState({ onCreate }: { onCreate: () => void }) {
   const { t } = useT("agents");
   return (
     <div className="flex flex-1 flex-col items-center justify-center px-6 py-16 text-center">
@@ -979,12 +893,10 @@ function EmptyState({
       <p className="mt-1 max-w-md text-sm text-muted-foreground">
         {t(($) => $.empty.description)}
       </p>
-      {isAdmin && (
-        <Button type="button" onClick={onCreate} size="sm" className="mt-5">
-          <Plus className="h-3 w-3" />
-          {t(($) => $.page.new_agent)}
-        </Button>
-      )}
+      <Button type="button" onClick={onCreate} size="sm" className="mt-5">
+        <Plus className="h-3 w-3" />
+        {t(($) => $.page.new_agent)}
+      </Button>
     </div>
   );
 }
@@ -1021,5 +933,93 @@ function NoMatches({
       <p className="text-sm">{t(($) => $.no_matches.title)}</p>
       <p className="max-w-xs text-xs">{body}</p>
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Template browser modal — lists all agent templates, grouped by category.
+// On selection it fetches the full detail (instructions) and passes it back
+// to the caller so CreateAgentDialog can pre-fill.
+// ---------------------------------------------------------------------------
+
+function TemplateBrowserModal({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (slug: string, detail: Pick<AgentTemplate, "name" | "description" | "instructions">) => void;
+}) {
+  const { t } = useT("agents");
+  const queryClient = useQueryClient();
+  const [loading, setLoading] = useState(false);
+
+  const { data: templates = [], isLoading } = useQuery(agentTemplateListOptions());
+
+  // Group templates by category
+  const grouped = useMemo(() => {
+    const map = new Map<string, AgentTemplateSummary[]>();
+    for (const tpl of templates) {
+      const cat = tpl.category ?? "Other";
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(tpl);
+    }
+    return map;
+  }, [templates]);
+
+  const handleSelect = async (slug: string) => {
+    setLoading(true);
+    try {
+      // Prefetch or get from cache
+      const detail = await queryClient.fetchQuery(agentTemplateDetailOptions(slug));
+      onSelect(slug, { name: detail.name, description: detail.description, instructions: detail.instructions });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent className="p-0 gap-0 flex flex-col overflow-hidden !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !w-full !max-w-2xl !h-[75vh]">
+        <DialogHeader className="border-b px-5 py-3 space-y-0">
+          <DialogTitle className="text-base font-semibold">{t(($) => $.template_browser.title)}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 overflow-y-auto p-5">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+              {t(($) => $.template_browser.loading)}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {[...grouped.entries()].map(([category, items]) => (
+                <div key={category}>
+                  <p className="mb-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">{category}</p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {items.map((tpl) => (
+                      <button
+                        key={tpl.slug}
+                        type="button"
+                        disabled={loading}
+                        onClick={() => handleSelect(tpl.slug)}
+                        className="flex flex-col items-start gap-1 rounded-lg border bg-background px-4 py-3 text-left transition-colors hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="text-sm font-medium">{tpl.name}</span>
+                        {tpl.description && (
+                          <span className="text-xs text-muted-foreground line-clamp-2">{tpl.description}</span>
+                        )}
+                        {tpl.skills.length > 0 && (
+                          <span className="mt-1 text-xs text-muted-foreground/60">
+                            {t(($) => $.template_browser.skill_count, { count: tpl.skills.length })}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

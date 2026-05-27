@@ -2,10 +2,10 @@
 # Multica installer — installs the CLI and optionally provisions a self-host server.
 #
 # Install / upgrade CLI only:
-#   curl -fsSL https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash
 #
 # Install CLI + provision self-host server:
-#   curl -fsSL https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.sh | bash -s -- --with-server
+#   curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server
 #
 # After installation, run `multica setup` to configure your environment.
 #
@@ -14,10 +14,10 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-REPO_URL="https://github.com/shivasymbl/forge.git"
-REPO_WEB_URL="https://github.com/shivasymbl/forge"  # without .git, for GitHub web APIs
-INSTALL_DIR="${FORGE_INSTALL_DIR:-$HOME/.forge/server}"
-BREW_PACKAGE="asymbl/tap/forge"
+REPO_URL="https://github.com/multica-ai/multica.git"
+REPO_WEB_URL="https://github.com/multica-ai/multica"  # without .git, for GitHub web APIs
+INSTALL_DIR="${MULTICA_INSTALL_DIR:-$HOME/.multica/server}"
+BREW_PACKAGE="multica-ai/tap/multica"
 
 # Colors (disabled when not a terminal)
 if [ -t 1 ] || [ -t 2 ]; then
@@ -41,13 +41,53 @@ fail()  { printf "${BOLD}${RED}✗ %s${RESET}\n" "$*" >&2; exit 1; }
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
+env_file_value() {
+  local file="$1"
+  local key="$2"
+  local default="$3"
+  local line value
+  line="$(grep -E "^${key}=" "$file" 2>/dev/null | tail -n 1 || true)"
+  if [ -z "$line" ]; then
+    printf "%s" "$default"
+    return
+  fi
+  value="${line#*=}"
+  value="${value%$'\r'}"
+  value="${value%\"}"
+  value="${value#\"}"
+  value="${value%\'}"
+  value="${value#\'}"
+  if [ -z "$value" ]; then
+    printf "%s" "$default"
+  else
+    printf "%s" "$value"
+  fi
+}
+
+selfhost_backend_port() {
+  local file="${1:-.env}"
+  local value
+  for key in BACKEND_PORT API_PORT SERVER_PORT PORT; do
+    value="$(env_file_value "$file" "$key" "")"
+    if [ -n "$value" ]; then
+      printf "%s" "$value"
+      return
+    fi
+  done
+  printf "8080"
+}
+
+selfhost_frontend_port() {
+  env_file_value "${1:-.env}" "FRONTEND_PORT" "3000"
+}
+
 detect_os() {
   case "$(uname -s)" in
     Darwin) OS="darwin" ;;
     Linux)  OS="linux" ;;
     MINGW*|MSYS*|CYGWIN*)
             fail "This script does not support Windows. Use the PowerShell installer instead:
-  irm https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.ps1 | iex" ;;
+  irm https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.ps1 | iex" ;;
     *)      fail "Unsupported operating system: $(uname -s). Multica supports macOS, Linux, and Windows." ;;
   esac
 
@@ -63,19 +103,37 @@ detect_os() {
 # ---------------------------------------------------------------------------
 # CLI Installation
 # ---------------------------------------------------------------------------
+_dump_brew_log() {
+  local log="$1"
+  if [ -s "$log" ]; then
+    warn "Homebrew output (last 80 lines):"
+    tail -n 80 "$log" | sed 's/^/  /' >&2
+  fi
+}
+
 install_cli_brew() {
   info "Installing Multica CLI via Homebrew..."
-  if ! brew tap multica-ai/tap 2>/dev/null; then
-    fail "Failed to add Homebrew tap. Check your network connection."
+  local brew_log
+  brew_log=$(mktemp)
+  if ! brew tap multica-ai/tap >"$brew_log" 2>&1; then
+    warn "Failed to add Homebrew tap. Falling back to GitHub Releases binary install."
+    _dump_brew_log "$brew_log"
+    rm -f "$brew_log"
+    return 1
   fi
   # brew install exits non-zero if already installed on older Homebrew versions
-  if ! brew install "$BREW_PACKAGE" 2>/dev/null; then
+  if ! brew install "$BREW_PACKAGE" >"$brew_log" 2>&1; then
     if brew list "$BREW_PACKAGE" >/dev/null 2>&1; then
+      rm -f "$brew_log"
       ok "Multica CLI already installed via Homebrew"
     else
-      fail "Failed to install forge via Homebrew."
+      warn "Failed to install multica via Homebrew. Falling back to GitHub Releases binary install."
+      _dump_brew_log "$brew_log"
+      rm -f "$brew_log"
+      return 1
     fi
   else
+    rm -f "$brew_log"
     ok "Multica CLI installed via Homebrew"
   fi
 }
@@ -91,29 +149,30 @@ install_cli_binary() {
   fi
 
   local version="${latest#v}"
-  local url="https://github.com/shivasymbl/forge/releases/latest/download/forge-cli-${OS}-${ARCH}.tar.gz"
+  local url="https://github.com/multica-ai/multica/releases/download/${latest}/multica-cli-${version}-${OS}-${ARCH}.tar.gz"
   local tmp_dir
   tmp_dir=$(mktemp -d)
 
   info "Downloading $url ..."
-  if ! curl -fsSL "$url" -o "$tmp_dir/forge.tar.gz"; then
+  if ! curl -fsSL "$url" -o "$tmp_dir/multica.tar.gz"; then
     rm -rf "$tmp_dir"
     fail "Failed to download CLI binary."
   fi
 
-  tar -xzf "$tmp_dir/forge.tar.gz" -C "$tmp_dir" forge
+  tar -xzf "$tmp_dir/multica.tar.gz" -C "$tmp_dir" multica
 
-  # Try /usr/local/bin first, fall back to ~/.local/bin
-  local bin_dir="/usr/local/bin"
+  # Try /usr/local/bin first, fall back to ~/.local/bin. Tests and scripted
+  # installs can override the first choice with MULTICA_BIN_DIR.
+  local bin_dir="${MULTICA_BIN_DIR:-/usr/local/bin}"
   if [ -w "$bin_dir" ]; then
-    mv "$tmp_dir/forge" "$bin_dir/forge"
+    mv "$tmp_dir/multica" "$bin_dir/multica"
   elif command_exists sudo; then
-    sudo mv "$tmp_dir/forge" "$bin_dir/forge"
+    sudo mv "$tmp_dir/multica" "$bin_dir/multica"
   else
     bin_dir="$HOME/.local/bin"
     mkdir -p "$bin_dir"
-    mv "$tmp_dir/forge" "$bin_dir/forge"
-    chmod +x "$bin_dir/forge"
+    mv "$tmp_dir/multica" "$bin_dir/multica"
+    chmod +x "$bin_dir/multica"
     # Add to PATH if not already there
     if ! echo "$PATH" | tr ':' '\n' | grep -q "^$bin_dir$"; then
       export PATH="$bin_dir:$PATH"
@@ -201,10 +260,10 @@ upgrade_cli_brew() {
 }
 
 install_cli() {
-  if command_exists forge; then
+  if command_exists multica; then
     local current_ver
-    # `forge version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
-    current_ver=$(forge version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    # `multica version` outputs "multica v0.1.13 (commit: abc1234)" — extract just the version
+    current_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
 
     local latest_ver
     latest_ver=$(get_latest_version)
@@ -226,20 +285,20 @@ install_cli() {
     fi
 
     local new_ver
-    new_ver=$(forge version 2>/dev/null | awk '{print $2}' || echo "unknown")
+    new_ver=$(multica version 2>/dev/null | awk '{print $2}' || echo "unknown")
     ok "Multica CLI upgraded ($current_ver → $new_ver)"
     return 0
   fi
 
   if command_exists brew; then
-    install_cli_brew
+    install_cli_brew || install_cli_binary
   else
     install_cli_binary
   fi
 
   # Verify
-  if ! command_exists forge; then
-    fail "CLI installed but 'forge' not found on PATH. You may need to restart your shell."
+  if ! command_exists multica; then
+    fail "CLI installed but 'multica' not found on PATH. You may need to restart your shell."
   fi
 }
 
@@ -320,9 +379,11 @@ setup_server() {
 
   # Wait for health check
   info "Waiting for backend to be ready..."
+  local backend_port
+  backend_port="$(selfhost_backend_port .env)"
   local ready=false
   for i in $(seq 1 45); do
-    if curl -sf http://localhost:8080/health >/dev/null 2>&1; then
+    if curl -sf "http://localhost:${backend_port}/health" >/dev/null 2>&1; then
       ready=true
       break
     fi
@@ -361,7 +422,7 @@ run_default() {
   printf "     ${CYAN}multica setup self-host${RESET}       # Connect to a self-hosted server\n"
   printf "\n"
   printf "  ${BOLD}Self-hosting?${RESET} Install the server first:\n"
-  printf "     curl -fsSL https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.sh | bash -s -- --with-server\n"
+  printf "     curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --with-server\n"
   printf "\n"
 }
 
@@ -384,8 +445,11 @@ run_with_server() {
   printf "${BOLD}${GREEN}  ✓ Multica server is running and CLI is ready!${RESET}\n"
   printf "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   printf "\n"
-  printf "  ${BOLD}Frontend:${RESET}  http://localhost:3000\n"
-  printf "  ${BOLD}Backend:${RESET}   http://localhost:8080\n"
+  local frontend_port backend_port
+  frontend_port="$(selfhost_frontend_port "$INSTALL_DIR/.env")"
+  backend_port="$(selfhost_backend_port "$INSTALL_DIR/.env")"
+  printf "  ${BOLD}Frontend:${RESET}  http://localhost:%s\n" "$frontend_port"
+  printf "  ${BOLD}Backend:${RESET}   http://localhost:%s\n" "$backend_port"
   printf "  ${BOLD}Server at:${RESET} %s\n" "$INSTALL_DIR"
   printf "\n"
   printf "  ${BOLD}Next: configure your CLI to connect${RESET}\n"
@@ -396,7 +460,7 @@ run_with_server() {
   printf "  or read the generated code from backend logs when Resend is unset.\n"
   printf "\n"
   printf "  ${BOLD}To stop all services:${RESET}\n"
-  printf "     curl -fsSL https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.sh | bash -s -- --stop\n"
+  printf "     curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash -s -- --stop\n"
   printf "\n"
 }
 
@@ -419,8 +483,8 @@ run_stop() {
     warn "No Multica installation found at $INSTALL_DIR"
   fi
 
-  if command_exists forge; then
-    forge daemon stop 2>/dev/null && ok "Daemon stopped" || true
+  if command_exists multica; then
+    multica daemon stop 2>/dev/null && ok "Daemon stopped" || true
   fi
 
   printf "\n"
@@ -444,7 +508,16 @@ main() {
         echo "  --with-server   Install CLI + provision a self-host server (Docker)"
         echo "  --stop          Stop a self-hosted installation"
         echo ""
-        echo "After installation, run 'forge setup' to configure your environment."
+        echo "Environment variables:"
+        echo "  MULTICA_INSTALL_DIR   Self-host server install directory"
+        echo "                        (default: \$HOME/.multica/server)"
+        echo "  MULTICA_BIN_DIR       Target directory for the CLI binary when"
+        echo "                        installing from GitHub Releases"
+        echo "                        (default: /usr/local/bin, then \$HOME/.local/bin)"
+        echo "  MULTICA_SELFHOST_REF  Git ref to check out for self-host assets"
+        echo "                        (default: latest release tag, falling back to main)"
+        echo ""
+        echo "After installation, run 'multica setup' to configure your environment."
         exit 0
         ;;
       *) warn "Unknown option: $1" ;;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { captureEvent } from "@multica/core/analytics";
 import { setCurrentWorkspace } from "@multica/core/platform";
@@ -10,14 +10,12 @@ import {
   completeOnboarding,
   ONBOARDING_STEP_ORDER,
   saveQuestionnaire,
-  type OnboardingCompletionPath,
+  useWelcomeStore,
   type OnboardingStep,
   type QuestionnaireAnswers,
 } from "@multica/core/onboarding";
-import { workspaceListOptions, workspaceKeys } from "@multica/core/workspace/queries";
-import type { Agent, AgentRuntime, Workspace } from "@multica/core/types";
-import { DragStrip } from "@multica/views/platform";
-import { StepHeader } from "./components/step-header";
+import { workspaceListOptions } from "@multica/core/workspace/queries";
+import type { AgentRuntime, Workspace } from "@multica/core/types";
 import { StepWelcome } from "./steps/step-welcome";
 import { StepSource } from "./steps/step-source";
 import { StepRole } from "./steps/step-role";
@@ -25,22 +23,37 @@ import { StepUseCase } from "./steps/step-use-case";
 import { StepWorkspace } from "./steps/step-workspace";
 import { StepRuntimeConnect } from "./steps/step-runtime-connect";
 import { StepPlatformFork } from "./steps/step-platform-fork";
-import { StepAgent } from "./steps/step-agent";
-import { StepFirstIssue } from "./steps/step-first-issue";
 import { useT } from "../i18n";
 
 const EMPTY_QUESTIONNAIRE: QuestionnaireAnswers = {
-  source: null,
+  source: [],
   source_other: null,
   source_skipped: false,
   role: null,
   role_other: null,
   role_skipped: false,
-  use_case: null,
+  use_case: [],
   use_case_other: null,
   use_case_skipped: false,
   version: 2,
 };
+
+/**
+ * Coerce a stored questionnaire slot into the array shape used by the
+ * current UI. Earlier versions of this app wrote `source` / `use_case`
+ * as a single string; tolerate that on read so a user who started
+ * onboarding before this change doesn't see their previous answer
+ * disappear on re-entry. Empty string and null both collapse to [].
+ */
+function coerceToArray<T extends string>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value.filter((v): v is T => typeof v === "string" && v.length > 0);
+  }
+  if (typeof value === "string" && value.length > 0) {
+    return [value as T];
+  }
+  return [];
+}
 
 /**
  * Merge persisted answers into the empty default. Re-entry pre-fills
@@ -51,9 +64,16 @@ const EMPTY_QUESTIONNAIRE: QuestionnaireAnswers = {
 function mergeQuestionnaire(
   raw: Record<string, unknown>,
 ): QuestionnaireAnswers {
-  const merged = { ...EMPTY_QUESTIONNAIRE, ...(raw as Partial<QuestionnaireAnswers>) };
+  const merged = {
+    ...EMPTY_QUESTIONNAIRE,
+    ...(raw as Partial<QuestionnaireAnswers>),
+  };
   return {
     ...merged,
+    source: coerceToArray<QuestionnaireAnswers["source"][number]>(raw.source),
+    use_case: coerceToArray<QuestionnaireAnswers["use_case"][number]>(
+      raw.use_case,
+    ),
     source_skipped: false,
     role_skipped: false,
     use_case_skipped: false,
@@ -61,19 +81,34 @@ function mergeQuestionnaire(
 }
 
 /**
+/**
  * Shell's onComplete contract:
- *   onComplete(workspace?) — if present, navigate into its issues list;
- *   if omitted, fall back to root. A Starter-content opt-in dialog runs
- *   on the issues page itself (see `StarterContentPrompt`), so the flow
- *   doesn't carry `firstIssueId` any more — there is no welcome issue
- *   created by onboarding.
+ *   onComplete(workspace?, issueId?) — if an issue id is present, navigate
+ *   straight into that onboarding issue; otherwise navigate into the
+ *   workspace issues list.
+ *
+ * Three exit shapes feed onComplete:
+ *   - Skip-existing (Welcome): completeOnboarding marks onboarded; navigate
+ *     to the existing workspace's issue list.
+ *   - Runtime-skipped (no runtime on Step 3): completeOnboarding marks
+ *     onboarded; we push a {choice:"skip"} welcome signal and navigate
+ *     to the workspace. The welcome hook in the workspace shell creates
+ *     the install-runtime / create-agent guide issues on landing.
+ *   - Runtime-connected (runtime picked on Step 3): completeOnboarding
+ *     marks onboarded; we push a {choice:"runtime", runtimeId} welcome
+ *     signal and navigate. The welcome hook creates the Multica Helper
+ *     agent on the picked runtime and shows the starter-card Modal.
+ *
+ * V3 contract: this file never touches createAgent / createIssue. The
+ * "what runs in the workspace shell after onboarding" decision is in
+ * `packages/views/workspace/welcome-after-onboarding.tsx`.
  */
 export function OnboardingFlow({
   onComplete,
   runtimeInstructions,
   onRuntimeRefresh,
 }: {
-  onComplete: (workspace?: Workspace) => void;
+  onComplete: (workspace?: Workspace, issueId?: string) => void;
   runtimeInstructions?: React.ReactNode;
   /** Desktop wires this to restart the bundled daemon so a freshly
    *  installed agent CLI gets picked up on the runtime step. Web omits
@@ -94,12 +129,8 @@ export function OnboardingFlow({
   const storedQuestionnaire = mergeQuestionnaire(user.onboarding_questionnaire);
   const [answers, setAnswers] = useState<QuestionnaireAnswers>(storedQuestionnaire);
 
-  const qc = useQueryClient();
-
   const [step, setStep] = useState<OnboardingStep>("welcome");
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
-  const [runtime, setRuntime] = useState<AgentRuntime | null>(null);
-  const [, setAgent] = useState<Agent | null>(null);
 
   // Fetched at Step 0 + Step 2. Step 2 uses it to detect a pre-existing
   // workspace from an earlier abandoned onboarding (so StepWorkspace shows
@@ -174,11 +205,10 @@ export function OnboardingFlow({
 
   // "I've done this before" path — returning user who already has a
   // workspace and just wants to land there. Marks onboarding complete
-  // server-side (idempotent via COALESCE on onboarded_at) and navigates
-  // to their first workspace. Because starter_content_state is NULL for
-  // any user reaching this button (it's freshly added), they'll see the
-  // StarterContentPrompt dialog on arrival — which is correct, since
-  // they never got a starter project and may want one now.
+  // server-side (idempotent via COALESCE on onboarded_at); when the
+  // target workspace has no runtime yet, the server seeds the same
+  // install-runtime issue as Step 3 Skip so the user lands on a
+  // concrete next step.
   const handleWelcomeSkip = useCallback(async () => {
     try {
       await completeOnboarding("skip_existing", workspaces[0]?.id);
@@ -200,32 +230,36 @@ export function OnboardingFlow({
     [advanceFrom],
   );
 
-  const handleRuntimeNext = useCallback((rt: AgentRuntime | null) => {
-    setRuntime(rt);
-    // Custom branch — not derived from ONBOARDING_STEP_ORDER because no
-    // runtime → no agent possible, so we skip Step 4 ("agent") and go
-    // straight to the finalizer. The post-landing StarterContentPrompt
-    // will detect "no agent in this workspace" and offer the self-serve
-    // template.
-    setStep(rt ? "agent" : "first_issue");
-  }, []);
-
-  const handleAgentCreated = useCallback(
-    (created: Agent) => {
-      setAgent(created);
-      // Mark the workspace's agent list stale so the dashboard's first
-      // mount refetches and includes the just-created agent. Without
-      // this, anything resolving an agent ID from the cached list (the
-      // welcome issue's assignee in particular) renders as "Unknown
-      // Agent" until something else triggers a refetch.
-      if (workspace) {
-        qc.invalidateQueries({
-          queryKey: workspaceKeys.agents(workspace.id),
-        });
+  const handleRuntimeNext = useCallback(
+    async (rt: AgentRuntime | null) => {
+      if (!workspace) return;
+      // Step 3 in v3 does exactly two things:
+      //   1. Mark onboarded server-side (the workspace layout hard gate
+      //      will redirect us back to /onboarding without this).
+      //   2. Park a transient welcome signal for the workspace shell to
+      //      consume on the next render, telling it what the user chose.
+      // Helper-agent creation and starter-issue creation happen in the
+      // workspace shell's welcome hook, AFTER navigation, via the generic
+      // createAgent / createIssue endpoints.
+      try {
+        await completeOnboarding(
+          rt ? "full" : "runtime_skipped",
+          workspace.id,
+        );
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : t(($) => $.errors.skip_failed),
+        );
+        return;
       }
-      advanceFrom("agent");
+      useWelcomeStore.getState().set({
+        workspaceId: workspace.id,
+        choice: rt ? "runtime" : "skip",
+        ...(rt ? { runtimeId: rt.id } : {}),
+      });
+      onComplete(workspace, undefined);
     },
-    [workspace, qc, advanceFrom],
+    [workspace, onComplete, t],
   );
 
   const handleBack = useCallback((from: OnboardingStep) => {
@@ -239,18 +273,9 @@ export function OnboardingFlow({
     setStep(prev);
   }, []);
 
-  // Step 5 fired `completeOnboarding` itself. Here we just route the
-  // user to their workspace — the starter-content decision happens
-  // inside the workspace via the `StarterContentPrompt` dialog.
-  const handleFinished = useCallback(() => {
-    onComplete(workspace ?? undefined);
-  }, [workspace, onComplete]);
-
   // Welcome, Questionnaire, and Workspace own full-bleed two-column
   // layouts (hero / side panel) with their own DragStrip + StepHeader.
-  // The remaining steps (runtime / agent / first_issue) still render
-  // inside a narrow legacy single-column shell below — they'll each
-  // move out as they get redesigned.
+  // The runtime step owns its own full-bleed shell.
   if (step === "welcome") {
     return (
       <StepWelcome
@@ -334,48 +359,7 @@ export function OnboardingFlow({
     );
   }
 
-  // Step 4 owns the same full-bleed editorial shell as Workspace /
-  // Questionnaire. `questionnaire` is threaded through so StepAgent
-  // can recommend a template based on the user's Q1–Q3 answers.
-  // No skip path: reaching Step 4 means a runtime was picked at
-  // Step 3, so creating the agent IS the step's purpose. Users who
-  // want a runtime-less workspace bypass at Step 3 and skip Step 4
-  // entirely (flow routes runtime=null → first_issue directly).
-  if (step === "agent" && runtime) {
-    return (
-      <StepAgent
-        runtime={runtime}
-        questionnaire={answers}
-        onCreated={handleAgentCreated}
-        onBack={() => handleBack("agent")}
-      />
-    );
-  }
-
-  // Derive the completion-path label for Step 5. The cloud-waitlist
-  // exit was removed from Step 3 (replaced with a "Coming soon" badge)
-  // so this is now a binary: runtime → "full", no runtime → "runtime_skipped".
-  const completionPath: OnboardingCompletionPath = runtime
-    ? "full"
-    : "runtime_skipped";
-
-  return (
-    <div className="animate-onboarding-enter flex min-h-full flex-col">
-      <DragStrip />
-      <div className="flex flex-1 flex-col items-center px-6 pb-12">
-        <div className="flex w-full max-w-xl flex-col gap-8">
-          <StepHeader currentStep={step} />
-          {step === "first_issue" && (
-            <StepFirstIssue
-              onFinished={handleFinished}
-              completionPath={completionPath}
-              workspaceId={workspace?.id}
-            />
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 export type { OnboardingStep };

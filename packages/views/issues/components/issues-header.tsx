@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  ChartGantt,
   Check,
   ChevronDown,
   CircleDot,
@@ -13,11 +14,12 @@ import {
   FolderMinus,
   List,
   SignalHigh,
-  SlidersHorizontal,
+  X,
   Tag,
   User,
   UserMinus,
   UserPen,
+  Waves,
 } from "lucide-react";
 import { Button } from "@multica/ui/components/ui/button";
 import {
@@ -27,6 +29,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
@@ -59,6 +63,7 @@ import {
   type ActorFilterValue,
 } from "@multica/core/issues/stores/view-store";
 import { useViewStore, useViewStoreApi } from "@multica/core/issues/stores/view-store-context";
+import type { SortField, IssueGrouping, ViewMode } from "@multica/core/issues/stores/view-store";
 import {
   useIssuesScopeStore,
   type IssuesScope,
@@ -67,6 +72,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@multica/ui/components/
 import type { Issue } from "@multica/core/types";
 import { useT } from "../../i18n";
 import { matchesPinyin } from "../../editor/extensions/pinyin-match";
+import { useIssueViewStore } from "@multica/core/issues/stores/view-store";
+import { WorkspaceAgentWorkingChip } from "./workspace-agent-working-chip";
 
 // ---------------------------------------------------------------------------
 // HoverCheck — shadcn official pattern (PR #6862)
@@ -490,10 +497,31 @@ function LabelSubContent({
 // IssuesHeader
 // ---------------------------------------------------------------------------
 
-export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
+export function IssuesHeader({
+  scopedIssues,
+  allowGantt = false,
+}: {
+  scopedIssues: Issue[];
+  allowGantt?: boolean;
+}) {
   const { t } = useT("issues");
   const scope = useIssuesScopeStore((s) => s.scope);
   const setScope = useIssuesScopeStore((s) => s.setScope);
+  // Bind the workspace agents-working chip to the global /issues view
+  // store. Subscribing here keeps the chip presentational and lets
+  // /my-issues bind its own store via a sibling header.
+  const agentRunningFilter = useIssueViewStore((s) => s.agentRunningFilter);
+  const toggleAgentRunningFilter = useIssueViewStore(
+    (s) => s.toggleAgentRunningFilter,
+  );
+  // Scope the chip to whatever issues this page is currently showing.
+  // /issues uses the full workspace minus Members/Agents pill filtering;
+  // passing the visible-issue id set lets the chip count match the list
+  // length when the filter is on.
+  const scopedIssueIds = useMemo(
+    () => new Set(scopedIssues.map((i) => i.id)),
+    [scopedIssues],
+  );
   const SCOPE_LABEL_KEY: Record<IssuesScope, "all_label" | "members_label" | "agents_label"> = {
     all: "all_label",
     members: "members_label",
@@ -532,7 +560,19 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
         ))}
       </div>
 
-      <IssueDisplayControls scopedIssues={scopedIssues} />
+      <div className="flex items-center gap-1">
+        {agentRunningFilter && (
+          <span className="mr-1 text-xs text-muted-foreground">
+            {t(($) => $.agent_activity.filter_active_label)}
+          </span>
+        )}
+        <WorkspaceAgentWorkingChip
+          value={agentRunningFilter}
+          onToggle={toggleAgentRunningFilter}
+          scopedIssueIds={scopedIssueIds}
+        />
+        <IssueDisplayControls scopedIssues={scopedIssues} allowGantt={allowGantt} />
+      </div>
     </div>
   );
 }
@@ -540,9 +580,14 @@ export function IssuesHeader({ scopedIssues }: { scopedIssues: Issue[] }) {
 export function IssueDisplayControls({
   scopedIssues,
   hideViewToggle = false,
+  allowGantt = false,
 }: {
   scopedIssues: Issue[];
   hideViewToggle?: boolean;
+  // Only Project Detail renders <GanttView>; other surfaces (global /issues,
+  // /my-issues, actor panel) ignore viewMode === "gantt" and would silently
+  // fall back to List if the option were exposed there. Keep Gantt opt-in.
+  allowGantt?: boolean;
 }) {
   const { t } = useT("issues");
   const viewMode = useViewStore((s) => s.viewMode);
@@ -562,17 +607,17 @@ export function IssueDisplayControls({
 
   const counts = useIssueCounts(scopedIssues);
 
-  const hasActiveFilters =
-    getActiveFilterCount({
-      statusFilters,
-      priorityFilters,
-      assigneeFilters,
-      includeNoAssignee,
-      creatorFilters,
-      projectFilters,
-      includeNoProject,
-      labelFilters,
-    }) > 0;
+  const activeFilterCount = getActiveFilterCount({
+    statusFilters,
+    priorityFilters,
+    assigneeFilters,
+    includeNoAssignee,
+    creatorFilters,
+    projectFilters,
+    includeNoProject,
+    labelFilters,
+  });
+  const hasActiveFilters = activeFilterCount > 0;
 
   const SORT_LABEL_KEY: Record<typeof SORT_OPTIONS[number]["value"], "sort_manual" | "sort_priority" | "sort_start_date" | "sort_due_date" | "sort_created" | "sort_title"> = {
     position: "sort_manual",
@@ -608,10 +653,29 @@ export function IssueDisplayControls({
               render={
                 <TooltipTrigger
                   render={
-                    <Button variant="outline" size="icon-sm" className="relative text-muted-foreground">
-                      <Filter className="size-4" />
+                    <Button
+                      variant={hasActiveFilters ? "default" : "outline"}
+                      size="sm"
+                      className={
+                        hasActiveFilters
+                          ? "gap-1 bg-brand text-white hover:bg-brand/90"
+                          : "gap-1 text-muted-foreground"
+                      }
+                    >
+                      <Filter className="size-3.5" />
+                      {hasActiveFilters
+                        ? t(($) => $.filters.active_count, { count: activeFilterCount })
+                        : t(($) => $.filters.tooltip)}
                       {hasActiveFilters && (
-                        <span className="absolute top-0 right-0 size-1.5 rounded-full bg-brand" />
+                        <span
+                          role="button"
+                          tabIndex={-1}
+                          className="-mr-1 ml-0.5 rounded-sm p-0.5 hover:bg-white/20"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); act.clearFilters(); }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                        >
+                          <X className="size-3" />
+                        </span>
                       )}
                     </Button>
                   }
@@ -800,8 +864,13 @@ export function IssueDisplayControls({
               render={
                 <TooltipTrigger
                   render={
-                    <Button variant="outline" size="icon-sm" className="text-muted-foreground">
-                      <SlidersHorizontal className="size-4" />
+                    <Button variant="outline" size="sm" className="gap-1 text-muted-foreground">
+                      {sortBy !== "position" && (
+                        sortDirection === "asc"
+                          ? <ArrowUp className="size-3.5" />
+                          : <ArrowDown className="size-3.5" />
+                      )}
+                      {sortLabel}
                     </Button>
                   }
                 />
@@ -830,14 +899,13 @@ export function IssueDisplayControls({
                       }
                     />
                     <DropdownMenuContent align="start" className="w-auto">
-                      {GROUPING_OPTIONS.map((opt) => (
-                        <DropdownMenuItem
-                          key={opt.value}
-                          onClick={() => act.setGrouping(opt.value)}
-                        >
-                          {t(($) => $.display[GROUPING_LABEL_KEY[opt.value]])}
-                        </DropdownMenuItem>
-                      ))}
+                      <DropdownMenuRadioGroup value={grouping} onValueChange={(v) => act.setGrouping(v as IssueGrouping)}>
+                        {GROUPING_OPTIONS.map((opt) => (
+                          <DropdownMenuRadioItem key={opt.value} value={opt.value}>
+                            {t(($) => $.display[GROUPING_LABEL_KEY[opt.value]])}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -863,30 +931,31 @@ export function IssueDisplayControls({
                     }
                   />
                   <DropdownMenuContent align="start" className="w-auto">
-                    {SORT_OPTIONS.map((opt) => (
-                      <DropdownMenuItem
-                        key={opt.value}
-                        onClick={() => act.setSortBy(opt.value)}
-                      >
-                        {t(($) => $.display[SORT_LABEL_KEY[opt.value]])}
-                      </DropdownMenuItem>
-                    ))}
+                    <DropdownMenuRadioGroup value={sortBy} onValueChange={(v) => act.setSortBy(v as SortField)}>
+                      {SORT_OPTIONS.map((opt) => (
+                        <DropdownMenuRadioItem key={opt.value} value={opt.value}>
+                          {t(($) => $.display[SORT_LABEL_KEY[opt.value]])}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button
-                  variant="outline"
-                  size="icon-sm"
-                  onClick={() =>
-                    act.setSortDirection(sortDirection === "asc" ? "desc" : "asc")
-                  }
-                  title={sortDirection === "asc" ? t(($) => $.display.ascending_title) : t(($) => $.display.descending_title)}
-                >
-                  {sortDirection === "asc" ? (
-                    <ArrowUp className="size-3.5" />
-                  ) : (
-                    <ArrowDown className="size-3.5" />
-                  )}
-                </Button>
+                {sortBy !== "position" && (
+                  <Button
+                    variant="outline"
+                    size="icon-sm"
+                    onClick={() =>
+                      act.setSortDirection(sortDirection === "asc" ? "desc" : "asc")
+                    }
+                    title={sortDirection === "asc" ? t(($) => $.display.ascending_title) : t(($) => $.display.descending_title)}
+                  >
+                    {sortDirection === "asc" ? (
+                      <ArrowUp className="size-3.5" />
+                    ) : (
+                      <ArrowDown className="size-3.5" />
+                    )}
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -913,7 +982,9 @@ export function IssueDisplayControls({
           </PopoverContent>
         </Popover>
 
-        {/* View toggle */}
+        {/* View toggle. If a store has `viewMode === "gantt"` persisted but
+            this surface doesn't render Gantt, fall back to "list" so the
+            trigger icon matches what's actually on screen. */}
         {!hideViewToggle && (
           <DropdownMenu>
             <Tooltip>
@@ -921,33 +992,62 @@ export function IssueDisplayControls({
                 render={
                   <TooltipTrigger
                     render={
-                      <Button variant="outline" size="icon-sm" className="text-muted-foreground">
+                      <Button variant="outline" size="sm" className="gap-1 text-muted-foreground">
                         {viewMode === "board" ? (
-                          <Columns3 className="size-4" />
+                          <Columns3 className="size-3.5" />
+                        ) : viewMode === "swimlane" ? (
+                          <Waves className="size-3.5" />
+                        ) : viewMode === "gantt" && allowGantt ? (
+                          <ChartGantt className="size-3.5" />
                         ) : (
-                          <List className="size-4" />
+                          <List className="size-3.5" />
                         )}
+                        {viewMode === "board"
+                          ? t(($) => $.view.board)
+                          : viewMode === "swimlane"
+                          ? t(($) => $.view.swimlane)
+                          : viewMode === "gantt" && allowGantt
+                          ? t(($) => $.view.gantt)
+                          : t(($) => $.view.list)}
                       </Button>
                     }
                   />
                 }
               />
               <TooltipContent side="bottom">
-                {viewMode === "board" ? t(($) => $.view.tooltip_board) : t(($) => $.view.tooltip_list)}
+                {viewMode === "board"
+                  ? t(($) => $.view.tooltip_board)
+                  : viewMode === "swimlane"
+                  ? t(($) => $.view.tooltip_swimlane)
+                  : viewMode === "gantt" && allowGantt
+                  ? t(($) => $.view.tooltip_gantt)
+                  : t(($) => $.view.tooltip_list)}
               </TooltipContent>
             </Tooltip>
             <DropdownMenuContent align="end" className="w-auto">
               <DropdownMenuGroup>
                 <DropdownMenuLabel>{t(($) => $.view.section)}</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => act.setViewMode("board")}>
+              </DropdownMenuGroup>
+              <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => act.setViewMode(v as ViewMode)}>
+                <DropdownMenuRadioItem value="board">
                   <Columns3 />
                   {t(($) => $.view.board)}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => act.setViewMode("list")}>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="list">
                   <List />
                   {t(($) => $.view.list)}
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="swimlane">
+                  <Waves />
+                  {t(($) => $.view.swimlane)}
+                </DropdownMenuRadioItem>
+                {allowGantt && (
+                  <DropdownMenuRadioItem value="gantt">
+                    <ChartGantt />
+                    {t(($) => $.view.gantt)}
+                  </DropdownMenuRadioItem>
+                )}
+              </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         )}

@@ -285,19 +285,11 @@ If you need full isolation between organizations or accounts — separate tokens
 
 ```bash
 multica workspace list
+multica workspace list --full-id
 multica workspace list --output json
 ```
 
-The current default workspace is marked with `*`.
-
-### Show Current Workspace
-
-```bash
-multica workspace current
-multica workspace current --output json
-```
-
-Prints the workspace that commands without `--workspace-id` and `MULTICA_WORKSPACE_ID` would target.
+The current default workspace is marked with `*`. Table output shows short UUID prefixes — pass `--full-id` when you need the canonical UUIDs.
 
 ### Switch Default Workspace
 
@@ -315,10 +307,12 @@ multica workspace get <workspace-id>
 multica workspace get <workspace-id> --output json
 ```
 
+Passing no `<workspace-id>` resolves to the current default workspace, so `multica workspace get` doubles as "what workspace am I on?".
+
 ### List Members
 
 ```bash
-multica workspace members <workspace-id>
+multica workspace member list <workspace-id>
 ```
 
 ## Issues
@@ -334,7 +328,14 @@ multica issue list --full-id
 multica issue list --limit 20 --output json
 ```
 
-Table output shows a routable issue `KEY` such as `MUL-123`; copy that key into follow-up commands like `issue get`, `issue comment list`, `issue status`, or `--parent`. Add `--full-id` when you need canonical UUIDs. Available filters: `--status`, `--priority`, `--assignee` / `--assignee-id`, `--project`, `--limit`. Use `--assignee-id <uuid>` for unambiguous filtering when names overlap.
+Table output shows a routable issue `KEY` such as `MUL-123`; copy that key into follow-up commands like `issue get`, `issue comment list`, `issue status`, or `--parent`. Add `--full-id` when you need canonical UUIDs. Available filters: `--status`, `--priority`, `--assignee` / `--assignee-id`, `--project`, `--metadata`, `--limit`. Use `--assignee-id <uuid>` for unambiguous filtering when names overlap.
+
+Use `--metadata key=value` (repeatable; combined with AND) to filter by per-issue metadata. The value is JSON-parsed: `true`/`false` become bool, numbers become numbers, anything else is a string. Wrap as `'"42"'` to force a string when the value would otherwise sniff as a number:
+
+```bash
+multica issue list --metadata pipeline_status=waiting_review
+multica issue list --metadata pr_number=482 --metadata is_blocked=true
+```
 
 ### Get Issue
 
@@ -350,7 +351,7 @@ multica issue create --title "Fix login bug" --description "..." --priority high
 multica issue create --title "Fix login bug" --assignee-id 5fb87ac7-23b5-4a7a-81fa-ed295a54545d
 ```
 
-Flags: `--title` (required), `--description`, `--status`, `--priority`, `--assignee` / `--assignee-id`, `--parent`, `--project`, `--due-date`. Pass `--assignee-id <uuid>` (mutually exclusive with `--assignee`) when scripting against the IDs returned by `multica workspace members --output json` / `multica agent list --output json`.
+Flags: `--title` (required), `--description`, `--status`, `--priority`, `--assignee` / `--assignee-id`, `--parent`, `--project`, `--due-date`. Pass `--assignee-id <uuid>` (mutually exclusive with `--assignee`) when scripting against the IDs returned by `multica workspace member list --output json` / `multica agent list --output json`.
 
 ### Update Issue
 
@@ -379,8 +380,43 @@ Valid statuses: `backlog`, `todo`, `in_progress`, `in_review`, `done`, `blocked`
 ### Comments
 
 ```bash
-# List comments
+# List comments — flat timeline, chronological. Hard cap of 2000 rows; on
+# long-running issues prefer one of the thread-aware reads below to keep
+# context windows tight.
 multica issue comment list <issue-id>
+
+# Single thread (root + every descendant). Anchor may be the root itself
+# or any reply inside the thread — the server walks up to the root.
+multica issue comment list <issue-id> --thread <comment-id>
+
+# Single thread, capped to the N most recent replies. The thread root is
+# always included (even with --tail 0), so an agent landing on a long
+# thread keeps the "what is this about" context without dragging hundreds
+# of replies into its prompt.
+multica issue comment list <issue-id> --thread <comment-id> --tail 30
+
+# Scroll older replies inside the same thread. --before / --before-id are
+# the reply cursor that the previous response emitted on stderr as
+# `Next reply cursor: --before <ts> --before-id <reply-id>`.
+multica issue comment list <issue-id> --thread <comment-id> --tail 30 \
+    --before <ts> --before-id <reply-id>
+
+# Most recently active threads (root + every descendant), grouped by
+# thread. Returns N complete conversational arcs, oldest-active first so
+# the freshest thread sits closest to "now" in an agent prompt.
+multica issue comment list <issue-id> --recent 20
+
+# Scroll older threads. Under --recent, --before / --before-id are a
+# THREAD cursor (thread last_activity_at + root id), emitted on stderr as
+# `Next thread cursor: --before <ts> --before-id <root-id>`.
+multica issue comment list <issue-id> --recent 20 \
+    --before <ts> --before-id <root-id>
+
+# Incremental polling. Combines with --thread or --recent; filters out
+# replies created on or before <ts> from the page (the thread root is
+# exempt so the agent always gets context).
+multica issue comment list <issue-id> --thread <comment-id> --tail 30 \
+    --since <RFC3339-timestamp>
 
 # Add a comment
 multica issue comment add <issue-id> --content "Looks good, merging now"
@@ -391,6 +427,56 @@ multica issue comment add <issue-id> --parent <comment-id> --content "Thanks!"
 # Delete a comment
 multica issue comment delete <comment-id>
 ```
+
+**`--before` / `--before-id` semantics depend on the paging mode**, by
+design — same flag, different scope:
+
+| Mode | What the cursor walks | stderr label |
+| --- | --- | --- |
+| `--recent N` | Older *threads* (last_activity_at, root_id) | `Next thread cursor` |
+| `--thread <id> --tail N` | Older *replies* inside that thread (created_at, id) | `Next reply cursor` |
+
+Outside those two modes (`--thread` without `--tail`, or no `--thread`
+and no `--recent`) the cursor flags are rejected so they cannot silently
+no-op. The server emits the cursor headers (`X-Multica-Next-Before` /
+`X-Multica-Next-Before-Id`) only when an older page actually exists —
+exact-boundary pages (e.g. `--tail 3` on a thread with exactly 3
+replies) intentionally return no cursor so callers stop paginating.
+
+When `--since` is combined with `--recent` or `--thread --tail`, the
+server additionally suppresses the cursor once the cursor target itself
+is older than `since`. Older pages walk strictly older rows, so they
+cannot satisfy `> since` either — emitting a cursor there would just
+hand back root-only pages until the caller reaches the start of the
+thread / issue. Incremental polling stops at the first page whose
+cursor target falls before the watermark.
+
+### Metadata
+
+Per-issue metadata is a small KV map agents use to track pipeline state (PR number, pipeline status, waiting_on, ...). Keys match `^[a-zA-Z_][a-zA-Z0-9_.-]{0,63}$`, values are primitives (string / number / bool), max 50 keys per issue, blob capped at 8KB.
+
+The bar for writing is high: pin a value only when it is materially important to the issue AND likely to be re-read by future runs on this same issue (the PR URL, the deploy URL, what we're blocked on). Most runs write zero new keys — that's the expected case. Don't pin runtime bookkeeping like `attempts`, single-run investigation notes, large logs, secrets/tokens, or description/comment copies — see the agent runtime prompt for the full anti-pattern list.
+
+```bash
+# List every key on an issue
+multica issue metadata list <issue-id>
+
+# Read a single key
+multica issue metadata get <issue-id> --key pipeline_status
+
+# Write a single key — value auto-typed (true/false → bool, numbers → number, else string)
+multica issue metadata set <issue-id> --key pipeline_status --value waiting_review
+multica issue metadata set <issue-id> --key pr_number --value 482
+multica issue metadata set <issue-id> --key is_blocked --value true
+
+# Force a specific type when sniffing would pick the wrong one
+multica issue metadata set <issue-id> --key code --value 42 --type string
+
+# Remove a key
+multica issue metadata delete <issue-id> --key pipeline_status
+```
+
+All writes are single-key atomic — concurrent agents writing different keys do not lose each other's updates. To query, use `multica issue list --metadata key=value` (see *List Issues* above).
 
 ### Subscribers
 

@@ -12,6 +12,36 @@ SELECT * FROM squad WHERE id = $1 AND workspace_id = $2;
 -- name: ListSquads :many
 SELECT * FROM squad WHERE workspace_id = $1 AND archived_at IS NULL ORDER BY created_at ASC;
 
+-- name: ListSquadMemberPreviewRows :many
+-- Static squad membership summary for list/hover previews. This deliberately
+-- excludes derived runtime/task status; the squad detail members-status
+-- endpoint owns live state.
+SELECT
+    sm.squad_id,
+    sm.member_type,
+    sm.member_id,
+    sm.role
+FROM squad_member sm
+JOIN squad s ON s.id = sm.squad_id
+WHERE s.workspace_id = $1 AND s.archived_at IS NULL
+ORDER BY
+    sm.squad_id ASC,
+    (sm.member_type = 'agent' AND sm.member_id = s.leader_id) DESC,
+    sm.created_at ASC;
+
+-- name: ListSquadMemberPreviewRowsBySquad :many
+SELECT
+    sm.squad_id,
+    sm.member_type,
+    sm.member_id,
+    sm.role
+FROM squad_member sm
+JOIN squad s ON s.id = sm.squad_id
+WHERE sm.squad_id = $1
+ORDER BY
+    (sm.member_type = 'agent' AND sm.member_id = s.leader_id) DESC,
+    sm.created_at ASC;
+
 -- name: ListAllSquads :many
 SELECT * FROM squad WHERE workspace_id = $1 ORDER BY created_at ASC;
 
@@ -71,6 +101,19 @@ ORDER BY s.created_at ASC;
 -- name: TransferSquadAssignees :exec
 -- Transfer all issues assigned to a squad to the squad's leader agent.
 UPDATE issue SET assignee_type = 'agent', assignee_id = $2, updated_at = now()
+WHERE assignee_type = 'squad' AND assignee_id = $1;
+
+-- name: TransferSquadAutopilotsToLeader :exec
+-- Mirrors TransferSquadAssignees for autopilot rows: when a squad is archived,
+-- any autopilot still pointing at the squad would otherwise dangle and the
+-- admission gate would skip every subsequent dispatch with "assignee squad
+-- cannot be resolved". Rewrite the assignee in place to the leader agent so
+-- the autopilot keeps firing under the same leader-only execution semantics
+-- it had a moment before the archive (Path A from MUL-2429).
+UPDATE autopilot
+SET assignee_type = 'agent',
+    assignee_id = $2,
+    updated_at = now()
 WHERE assignee_type = 'squad' AND assignee_id = $1;
 
 -- name: ListSquadMemberStatusRows :many

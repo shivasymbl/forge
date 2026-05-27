@@ -126,6 +126,7 @@
     "section_skills": "skill",
     "prop_runtime": "运行时",
     "prop_model": "模型",
+    "prop_thinking": "思考",
     "prop_visibility": "可见性",
     "prop_concurrency": "并发",
     "prop_owner": "所有者",
@@ -162,13 +163,16 @@
     "model_managed_by_runtime": "由运行时管理",
     "model_search_placeholder": "搜索或输入模型 ID",
     "model_discovering": "正在发现模型...",
-    "model_default_badge": "默认",
     "model_empty": "暂无可用模型",
     "model_empty_with_dot": "暂无可用模型。",
     "model_custom_tooltip": "使用\"{{value}}\"作为自定义模型 ID",
     "model_custom_use": "使用\"{{value}}\"",
     "model_clear": "清除（使用提供方默认）",
-    "model_clear_title": "清除并回退到运行时的提供方默认"
+    "model_clear_title": "清除并回退到运行时的提供方默认",
+    "thinking_default": "跟随 CLI 配置",
+    "thinking_tooltip": "思考 · {{value}}",
+    "thinking_clear": "跟随 CLI 配置",
+    "thinking_clear_title": "清除覆盖，让本地 CLI（claude/codex）的配置决定推理级别"
   },
   "model_dropdown": {
     "label": "模型",
@@ -254,7 +258,7 @@
       "placeholder": "定义这个智能体的角色、专长和工作风格。\n\n# 示例\n你是一名专注 React 和 TypeScript 的前端工程师。\n\n## 工作风格\n- 写小而聚焦的 PR —— 每个逻辑变更一个 commit\n- 优先组合而不是继承\n- 新组件总是配单元测试\n\n## 约束\n- 未经明确批准不要修改 shared/ 下的 type\n- 遵循 features/ 中现有的组件模式"
     },
     "env": {
-      "intro_readonly": "在智能体进程启动时注入。值已隐藏 —— 只有智能体所有者或工作区管理员可以查看和编辑。",
+      "intro_readonly": "在智能体进程启动时注入。只有工作区所有者 / 管理员可以查看或编辑值；每次解锁和编辑都会写入工作区审计日志。",
       "empty_readonly": "尚未配置环境变量。",
       "intro_prefix": "在智能体进程启动时注入（例如 ",
       "intro_separator": "、",
@@ -266,7 +270,14 @@
       "remove_aria": "移除变量",
       "duplicate_keys_toast": "环境变量 key 重复",
       "saved_toast": "已保存环境变量",
-      "save_failed_toast": "保存环境变量失败"
+      "save_failed_toast": "保存环境变量失败",
+      "not_revealed_title_other": "已配置 {{count}} 个变量",
+      "not_revealed_empty": "尚未配置环境变量。",
+      "not_revealed_hint": "在解锁前所有值保持隐藏。每次解锁与编辑都会写入工作区审计日志。",
+      "reveal_action": "解锁并编辑",
+      "revealing": "正在解锁…",
+      "reveal_failed_toast": "加载环境变量值失败",
+      "empty_editable": "尚未配置环境变量。新增一条即可在智能体启动时注入。"
     },
     "custom_args": {
       "intro": "在智能体命令启动时追加的额外 CLI 参数。多 token 的参数可以共用一行 —— 在传给 CLI 前会按空白拆分。",
@@ -381,7 +392,10 @@
     "copy_filtered": "复制筛选结果",
     "copied": "已复制",
     "waiting_events": "等待事件中...",
-    "no_data": "未记录执行数据。"
+    "no_data": "未记录执行数据。",
+    "sort_label": "排序",
+    "sort_chronological": "时间顺序",
+    "sort_newest_first": "最新在前"
   },
   "task_failure": {
     "agent_error": "智能体执行出错",

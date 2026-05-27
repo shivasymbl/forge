@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import {
   ArrowUpCircle,
   Globe,
-  Lock,
   MoreHorizontal,
   Trash2,
 } from "lucide-react";
@@ -17,17 +16,6 @@ import {
   deriveRuntimeHealth,
   runtimeUsageOptions,
 } from "@multica/core/runtimes";
-import { useDeleteRuntime } from "@multica/core/runtimes/mutations";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@multica/ui/components/ui/alert-dialog";
 import { Button } from "@multica/ui/components/ui/button";
 import {
   DropdownMenu,
@@ -41,12 +29,15 @@ import {
   TooltipTrigger,
 } from "@multica/ui/components/ui/tooltip";
 import { ActorAvatar } from "../../common/actor-avatar";
+import { useViewingTimezone } from "../../common/use-viewing-timezone";
 import { workloadConfig } from "../../agents/presence";
 import { ProviderLogo } from "./provider-logo";
 import { HealthIcon, useHealthLabel } from "./shared";
+import { DeleteRuntimeDialog } from "./delete-runtime-dialog";
 import {
   computeCostInWindow,
   formatLastSeen,
+  isSelfHealingRuntime,
   isVersionNewer,
   pctChange,
 } from "../utils";
@@ -231,36 +222,22 @@ function RuntimeNameCell({ runtime }: { runtime: AgentRuntime }) {
   );
 }
 
-// VisibilityBadge — small chip next to the runtime name showing whether
-// the runtime is shareable (public) or owner-only (private). Older backends
-// that don't ship the visibility field render the strict default (private).
+// Only public is worth a badge — private is the default and rendering a
+// `🔒 Private` chip on every row turns the whole column into noise.
 function VisibilityBadge({ runtime }: { runtime: AgentRuntime }) {
   const { t } = useT("runtimes");
-  const isPublic = runtime.visibility === "public";
-  const Icon = isPublic ? Globe : Lock;
-  const label = isPublic
-    ? t(($) => $.detail.visibility_label.public)
-    : t(($) => $.detail.visibility_label.private);
-  const tooltip = isPublic
-    ? t(($) => $.detail.visibility_hint.public)
-    : t(($) => $.detail.visibility_hint.private);
+  if (runtime.visibility !== "public") return null;
   return (
     <Tooltip>
       <TooltipTrigger
         render={
-          <span
-            className={`shrink-0 inline-flex items-center gap-0.5 rounded px-1 text-[10px] font-medium ${
-              isPublic
-                ? "bg-info/10 text-info"
-                : "bg-muted text-muted-foreground"
-            }`}
-          >
-            <Icon className="h-2.5 w-2.5" />
-            {label}
+          <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-info/10 px-1 text-[10px] font-medium text-info">
+            <Globe className="h-2.5 w-2.5" />
+            {t(($) => $.detail.visibility_label.public)}
           </span>
         }
       />
-      <TooltipContent>{tooltip}</TooltipContent>
+      <TooltipContent>{t(($) => $.detail.visibility_hint.public)}</TooltipContent>
     </Tooltip>
   );
 }
@@ -348,13 +325,17 @@ const COST_CELL_DAYS = 14;
 
 function CostCell({ runtimeId }: { runtimeId: string }) {
   const { t } = useT("runtimes");
+  const tz = useViewingTimezone();
   const { data: usage = [] } = useQuery(
-    runtimeUsageOptions(runtimeId, COST_CELL_DAYS),
+    runtimeUsageOptions(runtimeId, COST_CELL_DAYS, tz),
   );
-  const cost7d = useMemo(() => computeCostInWindow(usage, 7), [usage]);
+  const cost7d = useMemo(
+    () => computeCostInWindow(usage, 7, tz),
+    [usage, tz],
+  );
   const costPrev7d = useMemo(
-    () => computeCostInWindow(usage, 7, 7),
-    [usage],
+    () => computeCostInWindow(usage, 7, tz, 7),
+    [usage, tz],
   );
   const delta = pctChange(cost7d, costPrev7d);
 
@@ -424,11 +405,6 @@ function CliCell({
 
   return (
     <div className="flex min-w-0 items-center gap-1 text-xs">
-      {isManaged && (
-        <span className="shrink-0 rounded-sm bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
-          {t(($) => $.list.cli_managed_badge)}
-        </span>
-      )}
       <span
         className={`truncate font-mono ${
           hasUpdate ? "text-warning" : "text-muted-foreground"
@@ -498,26 +474,16 @@ function RowMenu({
   canDelete: boolean;
 }) {
   const { t } = useT("runtimes");
-  const deleteMutation = useDeleteRuntime(wsId);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  // Delete is currently the only row action; if the row can't run it, drop
+  // the kebab entirely so the column doesn't render an empty popover. The
+  // self-healing case (local + online) is the runtime-detail parity fix —
+  // see isSelfHealingRuntime for the rationale.
+  const selfHealing = isSelfHealingRuntime(runtime);
 
-  if (!canDelete) {
+  if (!canDelete || selfHealing) {
     return <span aria-hidden />;
   }
-
-  const handleDelete = () => {
-    deleteMutation.mutate(runtime.id, {
-      onSuccess: () => {
-        toast.success(t(($) => $.detail.toast_deleted));
-        setDeleteOpen(false);
-      },
-      onError: (e) => {
-        toast.error(
-          e instanceof Error ? e.message : t(($) => $.detail.toast_delete_failed),
-        );
-      },
-    });
-  };
 
   return (
     <>
@@ -550,35 +516,16 @@ function RowMenu({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <AlertDialog
+      <DeleteRuntimeDialog
         open={deleteOpen}
-        onOpenChange={(v) => {
-          if (deleteMutation.isPending) return;
-          setDeleteOpen(v);
+        onOpenChange={setDeleteOpen}
+        runtime={runtime}
+        wsId={wsId}
+        onDeleted={() => {
+          setDeleteOpen(false);
+          toast.success(t(($) => $.detail.toast_deleted));
         }}
-      >
-        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t(($) => $.detail.delete_dialog.title)}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t(($) => $.detail.delete_dialog.description, { name: runtime.name })}
-              <span className="mt-2 block text-xs text-muted-foreground/80">
-                {t(($) => $.list.delete_admin_hint)}
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{t(($) => $.detail.delete_dialog.cancel)}</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleteMutation.isPending}
-            >
-              {deleteMutation.isPending ? t(($) => $.detail.delete_dialog.deleting) : t(($) => $.detail.delete_dialog.confirm)}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      />
     </>
   );
 }

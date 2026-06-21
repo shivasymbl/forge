@@ -3,10 +3,35 @@
 -- =====================
 
 -- name: ListAutopilots :many
-SELECT * FROM autopilot
-WHERE workspace_id = $1
-  AND (sqlc.narg('status')::text IS NULL OR status = sqlc.narg('status'))
-ORDER BY created_at DESC;
+-- List rows carry three derived columns the list UI needs (trigger badges,
+-- next run, last-run outcome) so the page never has to N+1 into the detail
+-- endpoint. trigger_kinds/next_run_at only consider ENABLED triggers — the
+-- columns answer "how does this fire today", not "what is configured".
+-- last_run_status is COALESCEd to '' (never ran) because sqlc cannot infer
+-- nullability through a scalar subquery; the handler maps '' back to omitted.
+SELECT
+  sqlc.embed(a),
+  (
+    SELECT array_agg(DISTINCT t.kind ORDER BY t.kind)
+    FROM autopilot_trigger t
+    WHERE t.autopilot_id = a.id AND t.enabled
+  )::text[] AS trigger_kinds,
+  (
+    SELECT min(t.next_run_at)
+    FROM autopilot_trigger t
+    WHERE t.autopilot_id = a.id AND t.enabled AND t.kind = 'schedule'
+  )::timestamptz AS next_run_at,
+  COALESCE((
+    SELECT r.status
+    FROM autopilot_run r
+    WHERE r.autopilot_id = a.id
+    ORDER BY r.triggered_at DESC
+    LIMIT 1
+  ), '')::text AS last_run_status
+FROM autopilot a
+WHERE a.workspace_id = $1
+  AND (sqlc.narg('status')::text IS NULL OR a.status = sqlc.narg('status'))
+ORDER BY a.created_at DESC;
 
 -- name: GetAutopilot :one
 SELECT * FROM autopilot
@@ -64,11 +89,12 @@ WHERE id = $1;
 -- name: CreateAutopilotTrigger :one
 INSERT INTO autopilot_trigger (
     autopilot_id, kind, enabled, cron_expression, timezone,
-    next_run_at, webhook_token, label, provider
+    next_run_at, webhook_token, label, provider, event_filters
 ) VALUES (
     $1, $2, $3, sqlc.narg('cron_expression'), sqlc.narg('timezone'),
     sqlc.narg('next_run_at'), sqlc.narg('webhook_token'), sqlc.narg('label'),
-    COALESCE(sqlc.narg('provider')::text, 'generic')
+    COALESCE(sqlc.narg('provider')::text, 'generic'),
+    sqlc.narg('event_filters')
 ) RETURNING *;
 
 -- name: UpdateAutopilotTrigger :one
@@ -78,6 +104,7 @@ UPDATE autopilot_trigger SET
     timezone = COALESCE(sqlc.narg('timezone'), timezone),
     next_run_at = sqlc.narg('next_run_at'),
     label = COALESCE(sqlc.narg('label'), label),
+    event_filters = COALESCE(sqlc.narg('event_filters'), event_filters),
     updated_at = now()
 WHERE id = $1
 RETURNING *;
@@ -326,3 +353,24 @@ UPDATE autopilot
 SET status = 'paused', updated_at = now()
 WHERE id = $1 AND status = 'active'
 RETURNING *;
+
+-- =====================
+-- Autopilot Subscribers
+-- =====================
+
+-- name: ListAutopilotSubscribers :many
+-- ORDER BY created_at keeps chip rendering stable across refreshes.
+SELECT * FROM autopilot_subscriber
+WHERE autopilot_id = $1
+ORDER BY created_at ASC, user_id ASC;
+
+-- name: AddAutopilotSubscriber :exec
+INSERT INTO autopilot_subscriber (autopilot_id, user_type, user_id)
+VALUES ($1, $2, $3)
+ON CONFLICT (autopilot_id, user_type, user_id) DO NOTHING;
+
+-- name: DeleteAutopilotSubscribersForAutopilot :exec
+-- Paired with a re-insert loop to implement full-replace PATCH semantics.
+DELETE FROM autopilot_subscriber
+WHERE autopilot_id = $1;
+

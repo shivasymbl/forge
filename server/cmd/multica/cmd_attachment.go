@@ -22,12 +22,12 @@ var attachmentDownloadCmd = &cobra.Command{
 	Short: "Download an attachment to a local file",
 	Long:  "Download an attachment by its ID to a local file.",
 	Example: `  # Download an image attachment to the current directory
-  $ forge attachment download abc123
+  $ multica attachment download abc123
 
   # Download to a specific directory
-  $ forge attachment download abc123 -o /tmp/images`,
-	Args:  exactArgs(1),
-	RunE:  runAttachmentDownload,
+  $ multica attachment download abc123 -o /tmp/images`,
+	Args: exactArgs(1),
+	RunE: runAttachmentDownload,
 }
 
 func init() {
@@ -42,7 +42,7 @@ func runAttachmentDownload(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), cli.AtLeastAPITimeout(60*time.Second))
 	defer cancel()
 
 	// Fetch attachment metadata (includes signed download_url).

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import { useEffect, useRef, useCallback, useMemo } from "react";
 import {
   useQuery,
   useQueryClient,
@@ -56,6 +56,7 @@ function commentToTimelineEntry(c: Comment): TimelineEntry {
     resolved_at: c.resolved_at,
     resolved_by_type: c.resolved_by_type,
     resolved_by_id: c.resolved_by_id,
+    source_task_id: c.source_task_id,
   };
 }
 
@@ -67,8 +68,6 @@ export function useIssueTimeline(issueId: string, userId?: string) {
   const { data, isLoading: loading } = query;
 
   const timeline = useMemo<TimelineEntry[]>(() => data ?? [], [data]);
-
-  const [submitting, setSubmitting] = useState(false);
 
   // Stable mutation handles. TanStack v5 returns a fresh result wrapper from
   // useMutation per render, but the inner mutateAsync / mutate functions are
@@ -260,50 +259,56 @@ export function useIssueTimeline(issueId: string, userId?: string) {
 
   // --- Mutation functions ---
 
+  // Returns true on success, false on failure. The composer keeps the user's
+  // text (editor locked + button spinning) until this settles and clears only
+  // on success — so a slow send no longer leaves the box full next to an
+  // already-posted comment, and a failed send keeps the draft.
   const submitComment = useCallback(
-    async (content: string, attachmentIds?: string[]) => {
-      if (!content.trim() || submitting || !userId) return;
-      setSubmitting(true);
+    async (content: string, attachmentIds?: string[], suppressAgentIds?: string[]): Promise<boolean> => {
+      if (!content.trim() || !userId) return false;
       try {
-        await createComment({ content, attachmentIds });
+        await createComment({ content, attachmentIds, suppressAgentIds });
+        return true;
       } catch (err) {
         toast.error(
           err instanceof Error && err.message
             ? err.message
             : t(($) => $.comment.send_failed),
         );
-      } finally {
-        setSubmitting(false);
+        return false;
       }
     },
-    [userId, submitting, createComment, t],
+    [userId, createComment, t],
   );
 
   const submitReply = useCallback(
-    async (parentId: string, content: string, attachmentIds?: string[]) => {
-      if (!content.trim() || !userId) return;
+    async (parentId: string, content: string, attachmentIds?: string[], suppressAgentIds?: string[]): Promise<boolean> => {
+      if (!content.trim() || !userId) return false;
       try {
         await createComment({
           content,
           type: "comment",
           parentId,
           attachmentIds,
+          suppressAgentIds,
         });
+        return true;
       } catch (err) {
         toast.error(
           err instanceof Error && err.message
             ? err.message
             : t(($) => $.comment.send_reply_failed),
         );
+        return false;
       }
     },
     [userId, createComment, t],
   );
 
   const editComment = useCallback(
-    async (commentId: string, content: string, attachmentIds?: string[]) => {
+    async (commentId: string, content: string, attachmentIds: string[], suppressAgentIds?: string[]) => {
       try {
-        await updateComment({ commentId, content, attachmentIds });
+        await updateComment({ commentId, content, attachmentIds, suppressAgentIds });
       } catch (err) {
         toast.error(
           err instanceof Error && err.message
@@ -427,7 +432,6 @@ export function useIssueTimeline(issueId: string, userId?: string) {
   return {
     timeline: optimisticTimeline,
     loading,
-    submitting,
     submitComment,
     submitReply,
     editComment,

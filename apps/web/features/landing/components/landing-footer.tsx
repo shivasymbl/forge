@@ -98,6 +98,7 @@ export function LandingFooter() {
           <div className="flex items-center">
             {locales.map((l, i) => (
               <button
+                type="button"
                 key={l}
                 onClick={() => setLocale(l)}
                 className={cn(

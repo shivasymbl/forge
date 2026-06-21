@@ -65,12 +65,15 @@ import {
   DropdownMenuTrigger,
 } from "@multica/ui/components/ui/dropdown-menu";
 import { useAuthStore } from "@multica/core/auth";
+import { memberListOptions } from "@multica/core/workspace/queries";
 import { useCurrentWorkspace, useWorkspacePaths, paths } from "@multica/core/paths";
-import { workspaceListOptions, myInvitationListOptions, memberListOptions, workspaceKeys } from "@multica/core/workspace/queries";
+import { workspaceListOptions, myInvitationListOptions, workspaceKeys } from "@multica/core/workspace/queries";
+import { resolvePublicFileUrl } from "@multica/core/workspace/avatar-url";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { inboxKeys, deduplicateInboxItems } from "@multica/core/inbox/queries";
 import { api, ApiError } from "@multica/core/api";
 import { useModalStore } from "@multica/core/modals";
+import { useConfigStore } from "@multica/core/config";
 import { useMyRuntimesNeedUpdate } from "@multica/core/runtimes/hooks";
 import { pinListOptions } from "@multica/core/pins/queries";
 import { useDeletePin, useReorderPins } from "@multica/core/pins/mutations";
@@ -207,7 +210,7 @@ function SortablePinItem({
           }
         }}
         className={cn(
-          "text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground",
+          "text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground",
           isDragging && "pointer-events-none",
         )}
       >
@@ -349,11 +352,12 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   const p = useWorkspacePaths();
   const { data: workspaces = EMPTY_WORKSPACES } = useQuery(workspaceListOptions());
   const { data: myInvitations = EMPTY_INVITATIONS } = useQuery(myInvitationListOptions());
+  const workspaceCreationDisabled = useConfigStore((s) => s.workspaceCreationDisabled);
 
   const wsId = workspace?.id;
-  const { data: wsMembers = [] } = useQuery({ ...memberListOptions(wsId ?? ""), enabled: !!wsId });
-  const myWsRole = wsMembers.find((m) => m.user_id === userId)?.role ?? null;
-  const isWorkspaceAdmin = myWsRole === "owner" || myWsRole === "admin";
+  const { data: wsMembers = [] } = useQuery(memberListOptions(wsId));
+  const isWorkspaceAdmin = wsMembers.find((m) => m.user_id === userId)?.role === "owner" ||
+    wsMembers.find((m) => m.user_id === userId)?.role === "admin";
   const { data: inboxItems = EMPTY_INBOX } = useQuery({
     queryKey: wsId ? inboxKeys.list(wsId) : ["inbox", "disabled"],
     queryFn: () => api.listInbox(),
@@ -379,12 +383,17 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   // write (our own optimistic update, or a WS refetch) cannot reorder the
   // DOM under dnd-kit while its drop animation is still interpolating.
   const [localPinned, setLocalPinned] = useState<PinnedItem[]>(pinnedItems);
+  const [localPinnedWsId, setLocalPinnedWsId] = useState<string | null>(wsId ?? null);
   const isDraggingRef = useRef(false);
   useEffect(() => {
     if (!isDraggingRef.current) {
       setLocalPinned(pinnedItems);
     }
   }, [pinnedItems]);
+  useEffect(() => {
+    setLocalPinnedWsId(wsId ?? null);
+  }, [wsId]);
+  const visiblePinned = localPinnedWsId === (wsId ?? null) ? localPinned : EMPTY_PINS;
 
   const handleDragStart = useCallback(() => {
     isDraggingRef.current = true;
@@ -474,15 +483,15 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                   render={
                     <SidebarMenuButton>
                       <span className="relative">
-                        <WorkspaceAvatar name={workspace?.name ?? "M"} size="sm" />
+                        <WorkspaceAvatar name={workspace?.name ?? "M"} avatarUrl={workspace?.avatar_url} size="sm" />
                         {myInvitations.length > 0 && (
                           <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand ring-1 ring-sidebar" />
                         )}
                       </span>
                       <span className="flex-1 truncate font-medium">
-                        {workspace?.name ?? "Forge"}
+                        {workspace?.name ?? "Multica"}
                       </span>
-                      <ChevronDown className="size-3 text-sidebar-foreground/50" />
+                      <ChevronDown className="size-3 text-muted-foreground" />
                     </SidebarMenuButton>
                   }
                 />
@@ -496,7 +505,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                     <ActorAvatar
                       name={user?.name ?? ""}
                       initials={(user?.name ?? "U").charAt(0).toUpperCase()}
-                      avatarUrl={user?.avatar_url}
+                      avatarUrl={resolvePublicFileUrl(user?.avatar_url)}
                       size={32}
                     />
                     <div className="min-w-0 flex-1">
@@ -520,14 +529,14 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                           <AppLink href={paths.workspace(ws.slug).issues()} />
                         }
                       >
-                        <WorkspaceAvatar name={ws.name} size="sm" />
+                        <WorkspaceAvatar name={ws.name} avatarUrl={ws.avatar_url} size="sm" />
                         <span className="flex-1 truncate">{ws.name}</span>
                         {ws.id === workspace?.id && (
                           <Check className="h-3.5 w-3.5 text-primary" />
                         )}
                       </DropdownMenuItem>
                     ))}
-                    {isWorkspaceAdmin && (
+                    {!workspaceCreationDisabled && isWorkspaceAdmin && (
                       <DropdownMenuItem
                         onClick={() =>
                           useModalStore.getState().open("create-workspace")
@@ -622,7 +631,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
+                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
                         <span>{t(($) => $.nav[item.labelKey])}</span>
@@ -639,7 +648,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
             </SidebarGroupContent>
           </SidebarGroup>
 
-          {localPinned.length > 0 && (
+          {visiblePinned.length > 0 && (
             <Collapsible defaultOpen>
               <SidebarGroup className="group/pinned">
                 <SidebarGroupLabel
@@ -648,14 +657,14 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                 >
                   <span>{t(($) => $.sidebar.pinned_label)}</span>
                   <ChevronRight className="!size-3 ml-1 stroke-[2.5] transition-transform duration-200 group-data-[panel-open]/trigger:rotate-90" />
-                  <span className="ml-auto text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/pinned:opacity-100">{localPinned.length}</span>
+                  <span className="ml-auto text-[10px] text-muted-foreground opacity-0 transition-opacity group-hover/pinned:opacity-100">{visiblePinned.length}</span>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                      <SortableContext items={localPinned.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+                      <SortableContext items={visiblePinned.map((p) => p.id)} strategy={verticalListSortingStrategy}>
                         <SidebarMenu className="gap-0.5">
-                          {localPinned.map((pin: PinnedItem) => (
+                          {visiblePinned.map((pin: PinnedItem) => (
                             <PinRow
                               key={pin.id}
                               pin={pin}
@@ -686,7 +695,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
+                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
                         <span>{t(($) => $.nav[item.labelKey])}</span>
@@ -710,7 +719,7 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
                       <SidebarMenuButton
                         isActive={isActive}
                         render={<AppLink href={href} />}
-                        className="text-sidebar-foreground/70 hover:not-data-active:bg-sidebar-accent/60 hover:not-data-active:text-sidebar-foreground data-active:bg-sidebar-primary data-active:text-sidebar-primary-foreground"
+                        className="text-muted-foreground hover:not-data-active:bg-sidebar-accent/70 data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
                       >
                         <item.icon />
                         <span>{t(($) => $.nav[item.labelKey])}</span>

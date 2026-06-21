@@ -12,8 +12,18 @@ import { defaultStorage } from "../../platform/storage";
 export type ViewMode = "board" | "list" | "gantt" | "swimlane";
 export type GanttZoom = "day" | "week" | "month";
 export type IssueGrouping = "status" | "assignee";
+export type SwimlaneGrouping = "parent" | "project" | "assignee";
 export type SortField = "position" | "priority" | "start_date" | "due_date" | "created_at" | "title";
 export type SortDirection = "asc" | "desc";
+export type IssueDateField = "created_at" | "updated_at";
+
+export interface IssueDateFilter {
+  field: IssueDateField;
+  from: string;
+  to: string;
+}
+
+export const SWIMLANE_GROUPINGS: SwimlaneGrouping[] = ["parent", "project", "assignee"];
 
 export interface CardProperties {
   priority: boolean;
@@ -67,6 +77,7 @@ export interface IssueViewState {
   projectFilters: string[];
   includeNoProject: boolean;
   labelFilters: string[];
+  dateFilter: IssueDateFilter | null;
   // When true, the list only shows issues that currently have at least one
   // agent task in `running` status. Drives the workspace "agents working"
   // quick filter chip in the issues header. Not persisted across reloads —
@@ -79,8 +90,15 @@ export interface IssueViewState {
   listCollapsedStatuses: IssueStatus[];
   ganttZoom: GanttZoom;
   ganttShowCompleted: boolean;
-  swimlaneOrder: string[];
-  collapsedSwimlanes: string[];
+  /** Active swimlane grouping dimension. */
+  swimlaneGrouping: SwimlaneGrouping;
+  /** Persisted lane order, keyed by grouping. Entries are raw lane ids
+   *  (parent issue id, project id, or `<assigneeType>:<assigneeId>`). */
+  swimlaneOrders: Record<SwimlaneGrouping, string[]>;
+  /** Persisted collapsed lanes, keyed by grouping. Same id space as
+   *  `swimlaneOrders`, plus the sentinel `"none"` for the pinned
+   *  no-X lane and `"__orphans__"` for the parent-grouping fallback. */
+  collapsedSwimlanes: Record<SwimlaneGrouping, string[]>;
   setViewMode: (mode: ViewMode) => void;
   setGanttZoom: (zoom: GanttZoom) => void;
   toggleGanttShowCompleted: () => void;
@@ -93,6 +111,7 @@ export interface IssueViewState {
   toggleProjectFilter: (projectId: string) => void;
   toggleNoProject: () => void;
   toggleLabelFilter: (labelId: string) => void;
+  setDateFilter: (filter: IssueDateFilter | null) => void;
   toggleAgentRunningFilter: () => void;
   hideStatus: (status: IssueStatus) => void;
   showStatus: (status: IssueStatus) => void;
@@ -101,7 +120,10 @@ export interface IssueViewState {
   setSortDirection: (dir: SortDirection) => void;
   toggleCardProperty: (key: keyof CardProperties) => void;
   toggleListCollapsed: (status: IssueStatus) => void;
+  setSwimlaneGrouping: (grouping: SwimlaneGrouping) => void;
+  /** Update the lane order for the currently active swimlane grouping. */
   setSwimlaneOrder: (order: string[]) => void;
+  /** Toggle a lane key in the currently active swimlane grouping. */
   toggleSwimlaneCollapsed: (key: string) => void;
 }
 
@@ -116,6 +138,7 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
   projectFilters: [],
   includeNoProject: false,
   labelFilters: [],
+  dateFilter: null,
   agentRunningFilter: false,
   sortBy: "position",
   sortDirection: "asc",
@@ -132,8 +155,9 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
   listCollapsedStatuses: [],
   ganttZoom: "week",
   ganttShowCompleted: false,
-  swimlaneOrder: [],
-  collapsedSwimlanes: [],
+  swimlaneGrouping: "assignee",
+  swimlaneOrders: { parent: [], project: [], assignee: [] },
+  collapsedSwimlanes: { parent: [], project: [], assignee: [] },
 
   setViewMode: (mode) => set({ viewMode: mode }),
   setGanttZoom: (zoom) => set({ ganttZoom: zoom }),
@@ -194,6 +218,7 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
         ? state.labelFilters.filter((id) => id !== labelId)
         : [...state.labelFilters, labelId],
     })),
+  setDateFilter: (filter) => set({ dateFilter: filter }),
   toggleAgentRunningFilter: () =>
     set((state) => ({ agentRunningFilter: !state.agentRunningFilter })),
   hideStatus: (status) =>
@@ -222,6 +247,7 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
       projectFilters: [],
       includeNoProject: false,
       labelFilters: [],
+      dateFilter: null,
       agentRunningFilter: false,
     }),
   setSortBy: (field) => set({ sortBy: field }),
@@ -239,13 +265,22 @@ export const viewStoreSlice = (set: StoreApi<IssueViewState>["setState"]): Issue
         ? state.listCollapsedStatuses.filter((s) => s !== status)
         : [...state.listCollapsedStatuses, status],
     })),
-  setSwimlaneOrder: (order) => set({ swimlaneOrder: order }),
-  toggleSwimlaneCollapsed: (key) =>
+  setSwimlaneGrouping: (grouping) => set({ swimlaneGrouping: grouping }),
+  setSwimlaneOrder: (order) =>
     set((state) => ({
-      collapsedSwimlanes: state.collapsedSwimlanes.includes(key)
-        ? state.collapsedSwimlanes.filter((k) => k !== key)
-        : [...state.collapsedSwimlanes, key],
+      swimlaneOrders: { ...state.swimlaneOrders, [state.swimlaneGrouping]: order },
     })),
+  toggleSwimlaneCollapsed: (key) =>
+    set((state) => {
+      const grouping = state.swimlaneGrouping;
+      const current = state.collapsedSwimlanes[grouping];
+      const next = current.includes(key)
+        ? current.filter((k) => k !== key)
+        : [...current, key];
+      return {
+        collapsedSwimlanes: { ...state.collapsedSwimlanes, [grouping]: next },
+      };
+    }),
 });
 
 export const viewStorePersistOptions = (name: string) => ({
@@ -256,6 +291,8 @@ export const viewStorePersistOptions = (name: string) => ({
     // state changes second-to-second, and a stored toggle would let users
     // return to an unexplained empty list. Keep it ephemeral. See the
     // field comment on IssueViewState.
+    // `dateFilter` is also intentionally not persisted: relative presets such
+    // as Today would otherwise become stale after a calendar-day rollover.
     viewMode: state.viewMode,
     grouping: state.grouping,
     statusFilters: state.statusFilters,
@@ -272,7 +309,8 @@ export const viewStorePersistOptions = (name: string) => ({
     listCollapsedStatuses: state.listCollapsedStatuses,
     ganttZoom: state.ganttZoom,
     ganttShowCompleted: state.ganttShowCompleted,
-    swimlaneOrder: state.swimlaneOrder,
+    swimlaneGrouping: state.swimlaneGrouping,
+    swimlaneOrders: state.swimlaneOrders,
     collapsedSwimlanes: state.collapsedSwimlanes,
   }),
   // Default Zustand merge is shallow, so a persisted `cardProperties` snapshot
@@ -293,6 +331,13 @@ export function mergeViewStatePersisted<T extends IssueViewState>(
   current: T,
 ): T {
   const p = (persisted ?? {}) as Partial<T>;
+  // `collapsedSwimlanes` changed shape from `string[]` to
+  // `Record<SwimlaneGrouping, string[]>`. A snapshot saved in the old
+  // shape would otherwise overwrite the default record with an array
+  // and crash on first read — fall back to the default when the
+  // persisted value isn't a plain object.
+  const isRecord = (v: unknown): v is Record<string, unknown> =>
+    v !== null && typeof v === "object" && !Array.isArray(v);
   return {
     ...current,
     ...p,
@@ -300,6 +345,12 @@ export function mergeViewStatePersisted<T extends IssueViewState>(
       ...current.cardProperties,
       ...(p.cardProperties ?? {}),
     },
+    swimlaneOrders: isRecord(p.swimlaneOrders)
+      ? { ...current.swimlaneOrders, ...p.swimlaneOrders }
+      : current.swimlaneOrders,
+    collapsedSwimlanes: isRecord(p.collapsedSwimlanes)
+      ? { ...current.collapsedSwimlanes, ...p.collapsedSwimlanes }
+      : current.collapsedSwimlanes,
   };
 }
 

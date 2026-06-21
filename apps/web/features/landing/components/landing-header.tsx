@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { MulticaIcon } from "@multica/ui/components/common/multica-icon";
 import { cn } from "@multica/ui/lib/utils";
 import { useAuthStore } from "@multica/core/auth";
 import { isZhLocale, useLocale } from "../i18n";
@@ -38,20 +37,14 @@ export function LandingHeader({
       <div className="mx-auto flex h-[76px] max-w-[1320px] items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-center gap-6 lg:gap-8">
           <Link href="/" className="flex shrink-0 items-center gap-3">
-            <MulticaIcon
-              className={cn(
-                "size-5",
-                variant === "dark" ? "text-white" : "text-[#0a0d12]",
-              )}
-              noSpin
-            />
+            <img src="/brand/asymbl-mark.png" alt="Forge" className="size-5 object-contain" />
             <span
               className={cn(
-                "text-[18px] font-semibold tracking-[0.04em] lowercase sm:text-[20px]",
+                "text-[18px] font-semibold tracking-[0.04em] sm:text-[20px]",
                 variant === "dark" ? "text-white/92" : "text-[#0a0d12]",
               )}
             >
-              multica
+              Forge
             </span>
           </Link>
 

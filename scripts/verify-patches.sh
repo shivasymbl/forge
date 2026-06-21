@@ -307,6 +307,51 @@ check "11.2 entrypoint.sh runs migrate before server" \
 
 echo ""
 
+# ── 12. Landing Page (unauthenticated) ────────────────────────────────────────
+echo "[ 12 ] Landing Page"
+
+check "12.1 landing-footer shows Forge not multica" \
+  "! grep -q '>multica<' apps/web/features/landing/components/landing-footer.tsx"
+
+check "12.2 landing-header shows Forge not multica brand name" \
+  "! grep -q '>multica<\|>Multica<' apps/web/features/landing/components/landing-header.tsx"
+
+check "12.3 landing cli-section uses forge setup not multica setup" \
+  "! grep -q 'multica setup' apps/web/features/landing/components/download/cli-section.tsx"
+
+check "12.4 landing i18n has no multica setup reference" \
+  "! grep -q 'multica setup' apps/web/features/landing/i18n/en.ts"
+
+check "12.5 contact-sales metadata says Forge not Multica" \
+  "! grep -rq 'Contact Sales — Multica' apps/web/app/"
+
+check "12.6 sitemap baseUrl is forge.asymbl.app not multica.ai" \
+  "! grep -q 'multica.ai' apps/web/app/sitemap.ts"
+
+echo ""
+
+# ── 13. UI Contrast and Connect Dialog ────────────────────────────────────────
+echo "[ 13 ] UI / Connect Dialog"
+
+check "13.1 tokens.css has .bg-sidebar contrast override (muted-foreground)" \
+  "grep -q '\.bg-sidebar' packages/ui/styles/tokens.css && \
+   grep -q 'muted-foreground.*rgba' packages/ui/styles/tokens.css"
+
+check "13.2 connect-remote-dialog uses forge install.sh not multica-ai" \
+  "grep -q 'shivasymbl/forge' packages/views/runtimes/components/connect-remote-dialog.tsx"
+
+check "13.3 connect-remote-dialog SETUP_CMD is forge setup" \
+  "grep -q 'forge setup' packages/views/runtimes/components/connect-remote-dialog.tsx"
+
+check "13.4 connect-remote-dialog TOKEN_CMD uses forge.asymbl.app" \
+  "grep -q 'forge.asymbl.app' packages/views/runtimes/components/connect-remote-dialog.tsx"
+
+check "13.5 runtimes locale step1_label says Forge CLI not Multica CLI" \
+  "grep -q 'Forge CLI\|forge CLI' packages/views/locales/en/runtimes.json && \
+   ! grep -q 'Multica CLI\|multica CLI' packages/views/locales/en/runtimes.json"
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "=== Results: $PASS passed, $FAIL failed ==="
 echo ""

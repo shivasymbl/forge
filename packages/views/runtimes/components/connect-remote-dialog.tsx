@@ -22,12 +22,12 @@ import { useT } from "../../i18n";
 type Step = "instructions" | "success";
 
 const INSTALL_CMD =
-  "curl -fsSL https://raw.githubusercontent.com/multica-ai/multica/main/scripts/install.sh | bash";
-const SETUP_CMD = "multica setup";
-const TOKEN_CMD = `multica config set server_url https://api.multica.ai
-multica config set app_url https://multica.ai
-multica login --token <YOUR_TOKEN>
-multica daemon start`;
+  "curl -fsSL https://raw.githubusercontent.com/shivasymbl/forge/main/scripts/install.sh | bash";
+const SETUP_CMD = "forge setup";
+const TOKEN_CMD = `forge config set server_url https://forge.asymbl.app
+forge config set app_url https://forge.asymbl.app
+forge login --token <YOUR_TOKEN>
+forge daemon start`;
 
 export function ConnectRemoteDialog({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<Step>("instructions");
@@ -236,7 +236,7 @@ function TroubleshootingDetails() {
             {/* CLI command — literal shell string, not i18n content. */}
             {/* eslint-disable-next-line i18next/no-literal-string */}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-              {"multica daemon status"}
+              {"forge daemon status"}
             </code>
           </li>
           <li className="flex items-center gap-1.5">
@@ -244,7 +244,7 @@ function TroubleshootingDetails() {
             {/* CLI command — literal shell string, not i18n content. */}
             {/* eslint-disable-next-line i18next/no-literal-string */}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground">
-              {"multica daemon logs -f"}
+              {"forge daemon logs -f"}
             </code>
           </li>
         </ul>

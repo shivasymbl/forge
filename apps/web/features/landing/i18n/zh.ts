@@ -136,7 +136,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
       {
         title: "\u5b89\u88c5 CLI \u5e76\u8fde\u63a5\u4f60\u7684\u673a\u5668",
         description:
-          "运行 multica setup——它会引导你完成 OAuth 登录、启动守护进程、并扫描 11 款支持的 AI 编程工具（Claude Code、Codex、Cursor、Copilot、Gemini、Hermes、Kimi、Kiro CLI、OpenCode、OpenClaw、Pi）。本机已安装的工具会被自动注册成运行时。",
+          "运行 forge setup——它会引导你完成 OAuth 登录、启动守护进程、并扫描 11 款支持的 AI 编程工具（Claude Code、Codex、Cursor、Copilot、Gemini、Hermes、Kimi、Kiro CLI、OpenCode、OpenClaw、Pi）。本机已安装的工具会被自动注册成运行时。",
       },
       {
         title: "\u521b\u5efa\u4f60\u7684\u7b2c\u4e00\u4e2a 智能体",
@@ -1101,7 +1101,7 @@ export function createZhDict(allowSignup: boolean): LandingDict {
         title: "一键安装、自部署与稳定性",
         changes: [],
         features: [
-          "一键安装与配置——`curl | bash` 安装 CLI，`--with-server` 完整自部署，`multica setup` 配置连接环境",
+          "一键安装与配置——`curl | bash` 安装 CLI，`--with-server` 完整自部署，`forge setup` 配置连接环境",
           "自部署存储——无 S3 时本地文件存储回退，支持自定义 S3 端点（MinIO）",
           "项目列表页支持行内编辑属性（优先级、状态、负责人）",
         ],

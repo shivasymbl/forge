@@ -346,6 +346,10 @@ check "13.3 connect-remote-dialog SETUP_CMD is forge setup" \
 check "13.4 connect-remote-dialog TOKEN_CMD uses forge.asymbl.app" \
   "grep -q 'forge.asymbl.app' packages/views/runtimes/components/connect-remote-dialog.tsx"
 
+check "13.6 install.sh downloads from shivasymbl/forge not multica-ai" \
+  "grep -q 'shivasymbl/forge' scripts/install.sh && \
+   ! grep -q 'multica-ai/multica' scripts/install.sh"
+
 check "13.5 runtimes locale step1_label says Forge CLI not Multica CLI" \
   "grep -q 'Forge CLI\|forge CLI' packages/views/locales/en/runtimes.json && \
    ! grep -q 'Multica CLI\|multica CLI' packages/views/locales/en/runtimes.json"

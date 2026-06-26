@@ -48,7 +48,7 @@ forge daemon start`,
   }
 
   return {
-    setupCmd: "multica setup",
+    setupCmd: "forge setup",
     tokenCmd: `forge config set server_url ${CLOUD_SERVER_URL}
 forge config set app_url ${CLOUD_APP_URL}
 forge login --token <YOUR_TOKEN>

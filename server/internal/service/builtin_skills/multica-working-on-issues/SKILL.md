@@ -1,8 +1,8 @@
 ---
-name: multica-working-on-issues
+name: forge-working-on-issues
 description: "Use when working on a Multica issue after the runtime has provided the trigger context — to apply the product contracts the runtime brief does not encode: how PR linking differs from close intent, how to read a linked PR's real state via the pull-requests CLI, which metadata keys are high-signal, what status changes trigger on the server, and how sub-issue create status (todo vs backlog) controls whether assigned agents start immediately."
 user-invocable: false
-allowed-tools: Bash(multica *), Bash(git *), Bash(gh *)
+allowed-tools: Bash(forge *), Bash(git *), Bash(gh *)
 ---
 
 # Working on Multica issues
@@ -11,7 +11,7 @@ Product contracts the runtime brief does not fully encode: PR linking vs close
 intent, reading linked-PR state, metadata keys, status side effects, and
 sub-issue enqueue behavior.
 
-For building mention links, load `multica-mentioning` instead — not this skill.
+For building mention links, load `forge-mentioning` instead — not this skill.
 
 Every contract below is traced to source in
 `references/working-on-issues-source-map.md`.
@@ -23,7 +23,7 @@ same gate and they read different fields.
 
 **Linking** scans the PR **title, body, OR branch** for a routable issue key
 (`PREFIX-NUMBER`, e.g. `MUL-2759`). Each match writes an issue ↔ PR link row.
-This is the link that `multica issue pull-requests` reads back.
+This is the link that `forge issue pull-requests` reads back.
 
 ```text
 MUL-2759: add built-in issue working skill        # title prefix → links
@@ -77,7 +77,7 @@ from branch names, GitHub search, memory, or `pr_url` metadata (which can be
 stale).
 
 ```bash
-multica issue pull-requests <issue-id> --output json
+forge issue pull-requests <issue-id> --output json
 ```
 
 Returns `{"pull_requests": [...]}`. Each element exposes:
@@ -121,8 +121,8 @@ Not metadata: logs, summaries, files touched, timestamps, attempt counts,
 investigation notes. Those belong in the result comment.
 
 ```bash
-multica issue metadata set <issue-id> --key pr_url --value <url>
-multica issue metadata delete <issue-id> --key <stale-key>
+forge issue metadata set <issue-id> --key pr_url --value <url>
+forge issue metadata delete <issue-id> --key <stale-key>
 ```
 
 `--value` is JSON-parsed by default (bool/number are sniffed); pass `--type
@@ -152,17 +152,51 @@ time; `backlog` sets the assignee without triggering.
 Parallel children — all start now:
 
 ```bash
-multica issue create --title "..." --parent <issue-id> --assignee <agent> --status todo
+forge issue create --title "..." --parent <issue-id> --assignee <agent> --status todo
 ```
 
 Strictly serial children — park later steps, promote one at a time:
 
 ```bash
-multica issue create --title "Step 2: ..." --parent <issue-id> --assignee <agent> --status backlog
-multica issue status <child-id> todo   # promote when the previous step is truly done
+forge issue create --title "Step 2: ..." --parent <issue-id> --assignee <agent> --status backlog
+forge issue status <child-id> todo   # promote when the previous step is truly done
 ```
 
 Creating every serial step as `todo` enqueues the whole chain at once.
+
+### Stages: order sub-issues into barrier groups
+
+`--stage <N>` (N ≥ 1) groups sub-issues under the same parent into ordered
+stages. The parent assignee is woken **once, when a whole stage finishes** —
+i.e. every sub-issue in the lowest unfinished stage has reached a terminal
+status (`done`/`cancelled`). A completion that does not close a stage is silent
+(no comment, no wake). A sibling set with **no** stages is one implicit stage,
+so the parent is woken once when the *last* sub-issue finishes — not on every
+child.
+
+Advancement is agent-driven: the server only detects the closed barrier and
+wakes the parent assignee, who then decides whether to promote the next stage's
+`backlog` sub-issues to `todo`.
+
+```bash
+# Stage 1 runs now; later stages parked until promoted
+forge issue create --title "Research A" --parent <id> --assignee <agent> --stage 1 --status todo
+forge issue create --title "Research B" --parent <id> --assignee <agent> --stage 1 --status todo
+forge issue create --title "Build"      --parent <id> --assignee <agent> --stage 2 --status backlog
+forge issue create --title "Ship"       --parent <id> --assignee <agent> --stage 3 --status backlog
+```
+
+When both Stage 1 sub-issues finish you (the parent assignee) are woken with a
+"Stage 1 complete" comment. Inspect the layout, then promote the next stage:
+
+```bash
+forge issue children <parent-id>             # sub-issues grouped by stage
+forge issue status <stage-2-child-id> todo   # promote when its deps are met
+```
+
+Read each sub-issue's description before promoting and only promote items whose
+stated dependencies are met; if a description conflicts with the parent's
+breakdown, leave it `backlog` and comment to confirm first.
 
 ## Incorrect → correct
 
@@ -173,16 +207,18 @@ Fix login redirect                  # incorrect — no issue key, won't link
 MUL-2759: fix login redirect        # correct — links the PR
 ```
 
-Serial sub-issues (don't start the whole chain):
+Serial / phased sub-issues (don't start the whole chain at once):
 
 ```bash
-# incorrect — both fire immediately
-multica issue create --title "Step 2" --parent <issue-id> --assignee <agent> --status todo
-multica issue create --title "Step 3" --parent <issue-id> --assignee <agent> --status todo
+# incorrect — all fire immediately, no ordering
+forge issue create --title "Step 2" --parent <issue-id> --assignee <agent> --status todo
+forge issue create --title "Step 3" --parent <issue-id> --assignee <agent> --status todo
 
-# correct — parked, promote in turn
-multica issue create --title "Step 2" --parent <issue-id> --assignee <agent> --status backlog
-multica issue create --title "Step 3" --parent <issue-id> --assignee <agent> --status backlog
+# correct — stage them; Stage 1 runs, later stages park and are promoted as
+# each stage's barrier closes
+forge issue create --title "Step 1" --parent <issue-id> --assignee <agent> --stage 1 --status todo
+forge issue create --title "Step 2" --parent <issue-id> --assignee <agent> --stage 2 --status backlog
+forge issue create --title "Step 3" --parent <issue-id> --assignee <agent> --stage 3 --status backlog
 ```
 
 ## References
@@ -191,4 +227,6 @@ multica issue create --title "Step 3" --parent <issue-id> --assignee <agent> --s
 contract above: the `pull-requests` CLI and route, the PR response field list,
 `derivePRState`, the two-path link (`extractIdentifiers`) vs close-intent
 (`extractClosingIdentifiers`) proof, the backlog enqueue lines, child-done
-notify, and the metadata CLI. Re-derive before depending on an exact line.
+notify, the stage column / `stageBarrierClosed` barrier and the `--stage` /
+`issue children` CLI, and the metadata CLI. Re-derive before depending on an
+exact line.

@@ -1,6 +1,6 @@
 # Squad Source Map
 
-This file records source evidence for `multica-squads/SKILL.md`.
+This file records source evidence for `forge-squads/SKILL.md`.
 
 Use this when the task requires exact source paths, edge-case behavior, tests, or contract verification.
 
@@ -31,23 +31,23 @@ Key facts:
 Source:
 
 ```text
-server/cmd/multica/cmd_squad.go
+server/cmd/forge/cmd_squad.go
 ```
 
 Commands:
 
 ```bash
-multica squad list
-multica squad get <squad-id>
-multica squad create
-multica squad update <squad-id>
-multica squad delete <squad-id>
-multica squad activity <issue-id> <outcome>
+forge squad list
+forge squad get <squad-id>
+forge squad create
+forge squad update <squad-id>
+forge squad delete <squad-id>
+forge squad activity <issue-id> <outcome>
 
-multica squad member list <squad-id>
-multica squad member add <squad-id>
-multica squad member remove <squad-id>
-multica squad member set-role <squad-id>
+forge squad member list <squad-id>
+forge squad member add <squad-id>
+forge squad member remove <squad-id>
+forge squad member set-role <squad-id>
 ```
 
 Use `--help` for exact flags before writes.
@@ -81,7 +81,7 @@ Contracts:
 Source:
 
 ```text
-server/internal/handler/squad_briefing.go         # buildSquadLeaderBriefing ~104, buildSquadRoster ~121, renderMemberRow ~169
+server/internal/handler/squad_briefing.go         # buildSquadLeaderBriefing ~104, buildSquadRoster ~121, renderMemberRow ~169, agentSkillsRosterSegment, formatRosterRow
 server/internal/handler/daemon.go                  # briefing injection ~1187, ~1530
 ```
 
@@ -93,6 +93,11 @@ Contracts:
   (squad_briefing.go:104-117);
 - `instructions` section appears only when non-empty (squad_briefing.go:110-112);
 - archived agent members are skipped from roster (squad_briefing.go:178-179);
+- agent member roster rows list assigned workspace skills via
+  `loadSquadMemberSkillNames` (ListAgentSkillNamesByAgentIDs) and
+  `agentSkillsRosterSegment` — "skills: a, b" or
+  "no skills assigned"; builtin forge-* skills are excluded and human
+  members carry no skills segment (squad_briefing.go renderMemberRow);
 - no traced behavior injects `instructions` into every squad member.
 
 ## Issue Assignment

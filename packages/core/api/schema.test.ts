@@ -91,6 +91,27 @@ describe("ApiClient schema fallback", () => {
     });
   });
 
+<<<<<<< HEAD
+=======
+  describe("searchIssues", () => {
+    it("falls back to an empty result when the response is malformed", async () => {
+      stubFetchJson({ issues: "not-an-array", total: 0 });
+      const client = new ApiClient("https://api.example.test");
+      const res = await client.searchIssues({ q: "bug" });
+      expect(res).toEqual({ issues: [], total: 0 });
+    });
+  });
+
+  describe("searchProjects", () => {
+    it("falls back to an empty result when the response is malformed", async () => {
+      stubFetchJson({ projects: "not-an-array", total: 0 });
+      const client = new ApiClient("https://api.example.test");
+      const res = await client.searchProjects({ q: "roadmap" });
+      expect(res).toEqual({ projects: [], total: 0 });
+    });
+  });
+
+>>>>>>> v0.3.31
   describe("listAutopilots", () => {
     const baseAutopilot = {
       id: "ap-1",

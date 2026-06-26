@@ -110,8 +110,16 @@ export function ChatInput({
   //
   // `editorKey` — React `key` on the ContentEditor. Used to force a
   // remount when the user explicitly switches agent (so Tiptap's
+<<<<<<< HEAD
   // Placeholder, which only reads on mount, refreshes to "Tell {agent}…")
   // or when a cancelled empty run restores a draft from the server.
+=======
+  // Placeholder, which only reads on mount, refreshes to "Tell {agent}…").
+  // A cancelled-run draft restore does NOT bump this key: it just writes
+  // the restored text into `inputDraft`, and the editor's own
+  // defaultValue-sync effect (content-editor.tsx) pushes it into the live
+  // instance. There is no second copy of the draft to drift or resurface.
+>>>>>>> v0.3.31
   // Crucially this does NOT include `activeSessionId`: when the user
   // uploads a file in a brand-new chat, `handleUploadFile` first awaits
   // `ensureSession` which lazily creates the session and flips
@@ -134,6 +142,7 @@ export function ChatInput({
   const clearInputDraft = useChatStore((s) => s.clearInputDraft);
   const [isEmpty, setIsEmpty] = useState(!inputDraft.trim());
   const [isSubmitting, setIsSubmitting] = useState(false);
+<<<<<<< HEAD
   const [editorRestore, setEditorRestore] = useState<{
     id: string;
     content: string;
@@ -142,6 +151,10 @@ export function ChatInput({
   const consumedRestoreIdRef = useRef<string | null>(null);
   const activeRestore = editorRestore?.draftKey === draftKey ? editorRestore : null;
   const editorKey = `${selectedAgentId ?? "no-agent"}:${activeRestore?.id ?? "base"}`;
+=======
+  const consumedRestoreIdRef = useRef<string | null>(null);
+  const editorKey = selectedAgentId ?? "no-agent";
+>>>>>>> v0.3.31
   // Number of in-flight uploads. We track this explicitly (rather than
   // peeking at the editor on every render) so the SubmitButton visibly
   // disables the instant an upload starts and re-enables the instant it
@@ -190,11 +203,14 @@ export function ChatInput({
     setInputDraft(draftKey, restoreDraftRequest.content);
     setInputDraftAttachments(draftKey, restoreDraftRequest.attachments ?? []);
     setIsEmpty(!restoreDraftRequest.content.trim());
+<<<<<<< HEAD
     setEditorRestore({
       id: restoreDraftRequest.id,
       content: restoreDraftRequest.content,
       draftKey,
     });
+=======
+>>>>>>> v0.3.31
     onRestoreDraftConsumed?.();
   }, [
     draftKey,

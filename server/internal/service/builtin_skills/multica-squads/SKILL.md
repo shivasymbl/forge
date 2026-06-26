@@ -1,8 +1,8 @@
 ---
-name: multica-squads
+name: forge-squads
 description: "Use when creating, inspecting, updating, assigning, mentioning, or debugging Multica squads. Explains what squads are, squad/member fields, CLI commands, leader routing, issue assignment, comments, mentions, autopilot behavior, leader briefing, side effects, and product-gap handling."
 user-invocable: false
-allowed-tools: Bash(multica *)
+allowed-tools: Bash(forge *)
 ---
 
 # Multica Squads
@@ -12,19 +12,19 @@ allowed-tools: Bash(multica *)
 If debugging why a squad did or did not run, inspect first:
 
 ```bash
-multica issue get <issue-id> --output json
-multica squad get <squad-id> --output json
-multica squad member list <squad-id> --output json
-multica issue comment list <issue-id> --recent 20 --output json
+forge issue get <issue-id> --output json
+forge squad get <squad-id> --output json
+forge squad member list <squad-id> --output json
+forge issue comment list <issue-id> --recent 10 --output json
 ```
 
 If the command shape is unclear, check help instead of guessing:
 
 ```bash
-multica squad --help
-multica squad member --help
-multica issue update --help
-multica issue comment add --help
+forge squad --help
+forge squad member --help
+forge issue update --help
+forge issue comment add --help
 ```
 
 Do not assign, comment, mention, update, delete, or record squad activity just
@@ -50,26 +50,26 @@ Important consequences:
 Squad commands:
 
 ```bash
-multica squad list --output json
-multica squad get <squad-id> --output json
-multica squad create --name <name> --leader <agent-name-or-id> --output json
-multica squad update <squad-id> --instructions "<leader coordination policy>" --output json
-multica squad delete <squad-id>
+forge squad list --output json
+forge squad get <squad-id> --output json
+forge squad create --name <name> --leader <agent-name-or-id> --output json
+forge squad update <squad-id> --instructions "<leader coordination policy>" --output json
+forge squad delete <squad-id>
 ```
 
 Member commands:
 
 ```bash
-multica squad member list <squad-id> --output json
-multica squad member add <squad-id> --member-id <id> --type agent|member --role <role> --output json
-multica squad member remove <squad-id> --member-id <id> --type agent|member
-multica squad member set-role <squad-id> --member-id <id> --member-type agent|member --role <role> --output json
+forge squad member list <squad-id> --output json
+forge squad member add <squad-id> --member-id <id> --type agent|member --role <role> --output json
+forge squad member remove <squad-id> --member-id <id> --type agent|member
+forge squad member set-role <squad-id> --member-id <id> --member-type agent|member --role <role> --output json
 ```
 
 Squad leader evaluation command:
 
 ```bash
-multica squad activity <issue-id> action|no_action|failed --reason "<why>" --output json
+forge squad activity <issue-id> action|no_action|failed --reason "<why>" --output json
 ```
 
 `activity` is a write: it records the leader's evaluation decision on an issue.
@@ -78,10 +78,10 @@ Use it only when acting as the squad leader after evaluating a trigger.
 Issue/comment commands often needed with squads:
 
 ```bash
-multica issue get <issue-id> --output json
-multica issue update <issue-id> --help
-multica issue comment list <issue-id> --output json
-multica issue comment add <issue-id> --help
+forge issue get <issue-id> --output json
+forge issue update <issue-id> --help
+forge issue comment list <issue-id> --output json
+forge issue comment add <issue-id> --help
 ```
 
 Prefer `--output json` for reads. Use `--help` before writes.
@@ -138,7 +138,12 @@ agent instructions. The briefing includes:
 - Squad Instructions, only when `instructions` is non-empty.
 
 Roster entries include member name, member type, mention markdown, and non-empty
-role. Archived agent members are skipped from the briefing roster.
+role. For agent members the roster also lists their assigned skills
+(`skills: a, b`, or `no skills assigned` when the agent has none) so the leader
+can delegate by capability instead of guessing from the role label; human
+members carry no skills segment. Builtin `forge-*` skills are not listed —
+only the workspace skills explicitly attached to the agent. Archived agent
+members are skipped from the briefing roster.
 
 ## Issue assignment behavior
 
@@ -223,7 +228,7 @@ These actions can trigger agent work or mutate durable state:
 - commenting on a squad-assigned issue;
 - mentioning a squad;
 - creating or triggering squad-assigned autopilots;
-- recording squad activity with `multica squad activity`;
+- recording squad activity with `forge squad activity`;
 - deleting/archive squad.
 
 Do not perform side-effecting actions as tests unless the user explicitly

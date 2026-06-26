@@ -133,8 +133,8 @@ func TestMentioningSkillFollowsContractFrontmatter(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false (a platform-contract skill triggers from context, not a slash command)", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); got != "Bash(multica *)" {
-		t.Errorf("allowed-tools = %q, want Bash(multica *) (fence the skill to the CLI it teaches)", got)
+	if got := strings.TrimSpace(fm["allowed-tools"]); got != "Bash(forge *)" {
+		t.Errorf("allowed-tools = %q, want Bash(forge *) (fence the skill to the CLI it teaches)", got)
 	}
 }
 
@@ -212,7 +212,7 @@ func TestWorkingOnIssuesSkillCoversIssueLoopContracts(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false (issue workflow guidance triggers from context)", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
@@ -220,7 +220,7 @@ func TestWorkingOnIssuesSkillCoversIssueLoopContracts(t *testing.T) {
 	// references/source-map.md, not here, so a downstream main merge that
 	// shifts a line cannot rot this test into pinning a stale lie.
 	mustContain := []string{
-		"multica issue pull-requests <issue-id> --output json",
+		"forge issue pull-requests <issue-id> --output json",
 		"Default for code-changing issue work",
 		"open or update a PR before posting the final Multica issue comment",
 		"This is a default, not",
@@ -239,10 +239,10 @@ func TestWorkingOnIssuesSkillCoversIssueLoopContracts(t *testing.T) {
 
 	mustNotContain := []string{
 		"Start from the trigger, not from memory",
-		"multica issue get <issue-id> --output json",
-		"multica issue metadata list <issue-id> --output json",
-		"multica issue comment list <issue-id> --thread <trigger-comment-id>",
-		"multica issue comment add <issue-id> --parent <trigger-comment-id>",
+		"forge issue get <issue-id> --output json",
+		"forge issue metadata list <issue-id> --output json",
+		"forge issue comment list <issue-id> --thread <trigger-comment-id>",
+		"forge issue comment add <issue-id> --parent <trigger-comment-id>",
 	}
 	for _, forbidden := range mustNotContain {
 		if strings.Contains(body, forbidden) {
@@ -265,12 +265,12 @@ func TestSkillImportingSkillCoversWorkspaceImportContracts(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false (skill import guidance triggers from context)", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
 	mustContain := []string{
-		"multica skill import --url <url> --output json",
+		"forge skill import --url <url> --output json",
 		"/api/skills/import",
 		"clawhub.ai",
 		"skills.sh",
@@ -288,10 +288,10 @@ func TestSkillImportingSkillCoversWorkspaceImportContracts(t *testing.T) {
 		"id",
 		"name",
 		"legacy",
-		"multica skill list --output json",
+		"forge skill list --output json",
 		"npx skills add",
-		"multica agent skills add <agent-id> --skill-ids <skill-id> --output json",
-		"multica agent skills list <agent-id> --output json",
+		"forge agent skills add <agent-id> --skill-ids <skill-id> --output json",
+		"forge agent skills list <agent-id> --output json",
 		"replace-all",
 		"`set` is the replacement path",
 		"references/skill-importing-source-map.md",
@@ -303,7 +303,7 @@ func TestSkillImportingSkillCoversWorkspaceImportContracts(t *testing.T) {
 	}
 
 	mustNotContain := []string{
-		"multica agent skills set <agent-id> --skill-ids <skill-id>",
+		"forge agent skills set <agent-id> --skill-ids <skill-id>",
 		"merge the new skill id with the existing ids",
 	}
 	for _, forbidden := range mustNotContain {
@@ -327,7 +327,7 @@ func TestCreatingAgentsSkillCoversAgentCreationContracts(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false (agent creation guidance triggers from context)", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
@@ -335,14 +335,14 @@ func TestCreatingAgentsSkillCoversAgentCreationContracts(t *testing.T) {
 		"not a parameter manual",
 		"`description` is a catalog summary",
 		"`instructions` is the runtime behavior contract",
-		"multica agent create --name <name> --runtime-id <runtime-id>",
+		"forge agent create --name <name> --runtime-id <runtime-id>",
 		"`model` is a first-class persisted column",
 		"custom_env",
 		"--custom-env-stdin",
 		"--custom-env-file",
-		"multica agent skills add <agent-id> --skill-ids <skill-id> --output json",
-		"multica agent skills list <agent-id> --output json",
-		"multica agent get <agent-id> --output json",
+		"forge agent skills add <agent-id> --skill-ids <skill-id> --output json",
+		"forge agent skills list <agent-id> --output json",
+		"forge agent get <agent-id> --output json",
 		"255",
 		"references/creating-agents-source-map.md",
 	}
@@ -385,7 +385,7 @@ func TestSquadsSkillCoversLeaderRoutingContract(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false (squad guidance triggers from context)", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
@@ -393,7 +393,7 @@ func TestSquadsSkillCoversLeaderRoutingContract(t *testing.T) {
 		"A squad is not an agent",
 		"squad's `leader_id` agent",
 		"squad members are not automatically fanned out",
-		"multica squad member set-role",
+		"forge squad member set-role",
 		"mention://squad/<squad-id>",
 		"recording squad activity",
 		"references/squad-source-map.md",
@@ -419,7 +419,7 @@ func TestAutopilotsSkillCoversDispatchAndSideEffects(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
@@ -427,8 +427,8 @@ func TestAutopilotsSkillCoversDispatchAndSideEffects(t *testing.T) {
 		"An autopilot is not an agent",
 		"create_issue",
 		"run_only",
-		"multica autopilot trigger-add <autopilot-id> --kind schedule",
-		"multica autopilot trigger <autopilot-id> --output json",
+		"forge autopilot trigger-add <autopilot-id> --kind schedule",
+		"forge autopilot trigger <autopilot-id> --output json",
 		"Do not run `trigger`",
 		"webhook tokens",
 		"{{date}}",
@@ -455,16 +455,17 @@ func TestRuntimesAndReposSkillCoversClaimAndCheckoutChain(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
 	mustContain := []string{
 		"agent_task_queue",
 		"daemon polls/claims the task",
-		"multica runtime list --output json",
-		"multica repo checkout <url>",
+		"forge runtime list --output json",
+		"forge repo checkout <url>",
 		"MULTICA_DAEMON_PORT",
+		"resource_ref.ref",
 		"github_repo",
 		"local_directory",
 		"Runtime and repo commands affect active agent execution",
@@ -490,18 +491,20 @@ func TestProjectsAndResourcesSkillCoversDurableContext(t *testing.T) {
 	if got := strings.TrimSpace(fm["user-invocable"]); got != "false" {
 		t.Errorf("user-invocable = %q, want false", got)
 	}
-	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(multica *)") {
+	if got := strings.TrimSpace(fm["allowed-tools"]); !strings.Contains(got, "Bash(forge *)") {
 		t.Errorf("allowed-tools = %q, want access to the Multica CLI", got)
 	}
 
 	mustContain := []string{
 		"Projects are durable context containers",
-		".multica/project/resources.json",
-		"multica project resource list <project-id> --output json",
-		"multica project resource add <project-id> --type github_repo --url <github-url> --output json",
-		"multica project resource add <project-id> --type local_directory",
+		".forge/project/resources.json",
+		"forge project resource list <project-id> --output json",
+		"forge project resource add <project-id> --type github_repo --url <github-url> --output json",
+		"forge project resource add <project-id> --type github_repo --url <github-url> --ref <branch-or-sha> --output json",
+		"forge project resource add <project-id> --type local_directory",
 		"Project resources are durable and affect future tasks",
 		"github_repo.resource_ref.url",
+		"resource_ref.ref",
 		"references/projects-and-resources-source-map.md",
 	}
 	for _, want := range mustContain {

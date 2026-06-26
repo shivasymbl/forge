@@ -1,4 +1,4 @@
-import { githubUrl } from "../components/shared";
+import { githubUrl, discordUrl } from "../components/shared";
 import type { LandingDict } from "./types";
 
 export function createEnDict(allowSignup: boolean): LandingDict {
@@ -19,12 +19,12 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headlineLine1: "Your next 10 hires",
     headlineLine2: "won\u2019t be human.",
     subheading:
-      "Forge is an open-source, self-hosted platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
+      "Forge is an open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills \u2014 manage your human + agent workforce in one place.",
     cta: "Start free trial",
     downloadDesktop: "Download Desktop",
     talkToSales: "Talk to sales",
     worksWith: "Works with",
-    imageAlt: "Forge board view \u2014 issues managed by humans and agents",
+    imageAlt: "Multica board view \u2014 issues managed by humans and agents",
   },
 
   features: {
@@ -136,7 +136,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       {
         title: "Install the CLI & connect your machine",
         description:
-          "Run forge setup — it walks you through OAuth, starts the daemon, and scans for the 12 supported coding tools (Antigravity, Claude Code, Codex, Cursor, Copilot, Gemini, Hermes, Kimi, Kiro CLI, OpenCode, OpenClaw, Pi). Whichever ones you already have installed get registered as runtimes automatically.",
+          "Run forge setup \u2014 it walks you through OAuth, starts the daemon, and scans for the 12 supported coding tools (Antigravity, Claude Code, Codex, Cursor, Copilot, Gemini, Hermes, Kimi, Kiro CLI, OpenCode, OpenClaw, Pi). Whichever ones you already have installed get registered as runtimes automatically.",
       },
       {
         title: "Create your first agent",
@@ -165,7 +165,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       {
         title: "Self-host anywhere",
         description:
-          "Run Forge on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
+          "Run Multica on your own infrastructure. Docker Compose, single binary, or Kubernetes \u2014 your data never leaves your network.",
       },
       {
         title: "No vendor lock-in",
@@ -190,20 +190,20 @@ export function createEnDict(allowSignup: boolean): LandingDict {
     headline: "Questions & answers.",
     items: [
       {
-        question: "What coding agents does Forge support?",
+        question: "What coding agents does Multica support?",
         answer:
-"Forge supports 12 coding tools out of the box: Antigravity, Claude Code, Codex, Cursor, Copilot, Gemini, Hermes, Kimi, Kiro CLI, OpenCode, OpenClaw, and Pi. The daemon auto-detects whichever CLIs you already have installed and registers a runtime for each one. Since it's open source, you can also add your own backends."
+          "Forge supports 12 coding tools out of the box: Antigravity, Claude Code, Codex, Cursor, Copilot, Gemini, Hermes, Kimi, Kiro CLI, OpenCode, OpenClaw, and Pi. The daemon auto-detects whichever CLIs you already have installed and registers a runtime for each one. Since it's open source, you can also add your own backends.",
       },
       {
         question: "Do I need to self-host, or is there a cloud version?",
         answer:
-          "Both. You can self-host Forge on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
+          "Both. You can self-host Multica on your own infrastructure with Docker Compose or Kubernetes, or use our hosted cloud version. Your data, your choice.",
       },
       {
         question:
           "How is this different from just using coding agents directly?",
         answer:
-          "Coding agents are great at executing. Forge adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
+          "Coding agents are great at executing. Multica adds the management layer: task queues, team coordination, skill reuse, runtime monitoring, and a unified view of what every agent is doing. Think of it as the project manager for your agents.",
       },
       {
         question: "Can agents work on long-running tasks autonomously?",
@@ -244,6 +244,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
           { label: "Documentation", href: "/docs" },
           { label: "API", href: githubUrl },
           { label: "X (Twitter)", href: "https://x.com/asymbl_hq" },
+          { label: "Discord", href: discordUrl },
         ],
       },
       company: {
@@ -256,13 +257,13 @@ export function createEnDict(allowSignup: boolean): LandingDict {
         ],
       },
     },
-    copyright: "\u00a9 {year} Asymbl. All rights reserved.",
+    copyright: "\u00a9 {year} Multica. All rights reserved.",
   },
 
   about: {
     title: "About Forge",
     nameLine: {
-      prefix: "Forge \u2014 ",
+      prefix: "Multica \u2014 ",
       mul: "Mul",
       tiplexed: "tiplexed ",
       i: "I",
@@ -292,6 +293,131 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       fixes: "Bug Fixes",
     },
     entries: [
+      {
+        version: "0.3.31",
+        date: "2026-06-26",
+        title: "Cross-workspace unread dot, Composio toolkit foundation, and a friendlier editor",
+        changes: [],
+        features: [
+          "The workspace switcher shows a dot when another workspace has unread inbox items.",
+          "New Composio toolkit foundation that prepares the upcoming third-party integrations.",
+          "You can run desktop dev on multiple checkouts side by side without them clashing.",
+          "The Chinese docs homepage now opens with a short intro video.",
+        ],
+        improvements: [
+          "Contributor docs note that the desktop dev command isolates per checkout.",
+        ],
+        fixes: [
+          "Tab now reliably indents selected list items in the Issue editor and keeps focus in place.",
+          "Squad leaders boot with the full squad briefing when you @-mention them in a comment, and replies that inherit the parent mention no longer trigger them again.",
+          "Code-block selections in Issues stay put while the page re-renders.",
+          "Assigning an Issue directly to an agent opens the handoff note instantly instead of waiting on a check.",
+          "The workspace switcher's unread dot now matches what you actually see in your inbox.",
+          "The edit-comment save button shows a loading state until the change is saved.",
+          "Search results load reliably again.",
+          "Self-hosting fails fast with a clear hint when Docker Compose v2 is missing.",
+        ],
+      },
+      {
+        version: "0.3.30",
+        date: "2026-06-25",
+        title: "Slack Channel Integration, a Smoother Editor, and Many Reliability Fixes",
+        changes: [],
+        features: [
+          "Slack conversations now run on the new unified collaboration channel, putting Slack on the same reliable footing as Feishu and Lark",
+          "The Issue composer now accepts the highlighted @mention or suggestion when you press Tab, so picking the right teammate or Issue is a single keypress",
+          "Task list items can be toggled from a one-click button in the editor's floating menu",
+        ],
+        improvements: [
+          "Frontend continuous integration now skips automatically when a pull request does not touch frontend code, freeing up build time for the changes that actually need it",
+          "Command line subcommands have broader automated test coverage so everyday workflows stay stable across releases",
+          "Provider-specific default agent arguments now have explicit documentation, and a one-time Lark cutover flag was retired now that the unified channel adapter is fully in production",
+        ],
+        fixes: [
+          "OpenClaw is more forgiving about config file mismatches and supports the newer 2026.6.x agents schema, keeping existing OpenClaw runtimes connected",
+          "Moving an Issue between projects now removes it from the old project list right away, and board column counts stay accurate when an Issue's status changes off-screen",
+          "Attachment previews open correctly even when files are served from a different origin",
+          "Command line agents wait for the daemon to be ready before falling back to a personal access token, and the self-host setup flow now respects existing configuration and surfaces server URL changes",
+          "Lark messages now link to the configured app URL instead of falling back to a generic web address",
+          "Codex runs clean up correctly even when their output overflows, Kiro runs preserve their goal completion state through close errors, and agent shutdown now terminates the entire opencode process group before closing",
+          "Quick-create reliably keeps every uploaded file attached when several uploads happen at the same time",
+          "Redis webhook rate limiting no longer throttles unrelated webhooks together, and daemon skill bundles load reliably even for large skill libraries",
+          "Issue label names now reject control characters so labels stay readable everywhere",
+        ],
+      },
+      {
+        version: "0.3.29",
+        date: "2026-06-24",
+        title: "Feishu Channel Upgrade, Feature Rollout Controls, and More Reliable Autopilots",
+        changes: [],
+        features: [
+          "Feishu conversations now run on a new unified collaboration channel, making message handling more stable and consistent and laying the groundwork for more chat platforms",
+          "New feature rollout controls cover both the app and the daemon, so teams can open up risky changes gradually and to a limited audience",
+          "When agents read long Issue discussions, resolved threads now fold down to their key conclusion to keep the context focused",
+          "Feishu users can start a fresh conversation with the `/new` command, and Feishu WebSocket connections can use a configured proxy",
+        ],
+        improvements: [
+          "Scheduled autopilots are more dependable: even with missed schedules, retries, or several runners working at once, they settle on the intended single run",
+          "Agent runtime briefings can switch to a slimmer version that drops redundant detail, with the full version still available as a fallback",
+          "Runtime provider docs now match the current provider list, with Qoder, CodeBuddy, and Antigravity guidance added and the outdated Gemini CLI runtime removed",
+          "The branch or version pinned in a project's repository settings now takes effect during local agent work, so agents no longer end up on the wrong branch",
+        ],
+        fixes: [
+          "Sub-Issues now stay in stable creation order inside a parent Issue",
+          "Attachment previews now open correctly inside Issues",
+          "The @mention picker now selects the highlighted person or Issue even when search results reorder",
+          "Cancelled chat drafts stay deleted after you navigate away and come back",
+          "Autopilot cold starts, the agent status in the Issue header, and Antigravity provider errors now report more accurately",
+        ],
+      },
+      {
+        version: "0.3.28",
+        date: "2026-06-23",
+        title: "Staged Sub-Issues and Qoder Runtime Support",
+        changes: [],
+        features: [
+          "Sub-Issues can now be organized into stages, so parallel work moves forward together and the parent Issue is updated only when a stage is complete",
+          "Assigning or batch-updating an Issue now confirms upfront whether it will start an agent — and which one — so you can apply the change without launching a run; when a run does start, you can attach a handoff note that the agent receives as context for that run",
+          "Qoder is now available as an agent provider, including model discovery and provider branding",
+          "Custom runtimes can include fixed launch arguments, with clearer feedback when a saved runtime cannot register",
+        ],
+        improvements: [
+          "Project descriptions now travel with agent work, giving agents more durable context from the project they are working in",
+          "Command line workflows now cover comment resolve actions, Issue usage summaries, and autopilot subscriber management",
+          "Readonly code blocks include a copy button, and the marketing header now shows the live GitHub star count",
+          "Agent skill delivery is more efficient for newer daemons while keeping older daemons compatible",
+        ],
+        fixes: [
+          "Issue batch edit menus now show the real shared status, priority, and assignee for the selected Issues",
+          "Dragging Issues across board and list views no longer snaps cards back before settling",
+          "GitHub PR links and check updates are routed to the workspace that owns the repository",
+          "Live task transcripts now keep updating while a run is still in progress",
+          "Custom runtime deletion now removes the saved profile instead of only removing a row that could return later",
+        ],
+      },
+      {
+        version: "0.3.27",
+        date: "2026-06-22",
+        title: "Threaded Lark Replies and Smoother Team Workflows",
+        changes: [],
+        features: [
+          "Lark conversations now reply inside the original topic when a message starts from a topic, keeping team discussions easier to follow",
+          "Squad leaders can see member skills in the roster, making delegation more precise",
+          "Discord is now available from the website footer, help menu, README, and a dismissible in-app sidebar card",
+        ],
+        improvements: [
+          "Agent activity in Issue headers opens on hover, so live work is easier to check at a glance",
+          "Desktop sidebars and pinned navigation feel smoother, clearer, and less noisy",
+          "Chat replies, assignment catch-up, and contributor guidance are tighter so agent work stays in the right place with less noise",
+          "Remote CLI setup and custom runtime deletion now give clearer guidance before users continue",
+        ],
+        fixes: [
+          "Backlog parent Issues stay parked when child work finishes, avoiding unexpected follow-up automation",
+          "Project deletion now requires an owner or admin, and private GitHub skill imports work when a valid token is available",
+          "Login verification focuses the code field automatically, and detail sidebars no longer animate unexpectedly when pages open",
+          "Codex and daemon diagnostics are more reliable when permissions or slow task claims need investigation",
+        ],
+      },
       {
         version: "0.3.25",
         date: "2026-06-18",
@@ -723,7 +849,7 @@ export function createEnDict(allowSignup: boolean): LandingDict {
       {
         version: "0.3.8",
         date: "2026-05-25",
-        title: "Forge for iOS, Helm Self-Hosting & Smoother Collaboration",
+        title: "Multica for iOS, Helm Self-Hosting & Smoother Collaboration",
         changes: [],
         features: [
           "Multica for iOS is now available as our first official usable mobile client, covering login, workspaces, inbox, Issues, projects, chat, comments, reactions, presence, and live updates; it is not on the App Store yet, so users need to build and install it manually",

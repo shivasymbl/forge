@@ -6,13 +6,13 @@ after the latest `main` merge; the prior skill cited pre-merge lines that have
 since moved (see the "drifted" column). Re-confirm with the verification command
 at the bottom before relying on an exact line.
 
-## `multica issue pull-requests` — read PR links from Multica
+## `forge issue pull-requests` — read PR links from Multica
 
 | Behavior | File:line | Drifted from |
 |---|---|---|
-| CLI command `pull-requests <id>` (alias `prs`) | `server/cmd/multica/cmd_issue.go:105` | `:104` |
-| `runIssuePullRequests` handler | `server/cmd/multica/cmd_issue.go:507` | new citation |
-| Calls `GET /api/issues/<id>/pull-requests` | `server/cmd/multica/cmd_issue.go:522` | `:522` (unchanged) |
+| CLI command `pull-requests <id>` (alias `prs`) | `server/cmd/forge/cmd_issue.go:105` | `:104` |
+| `runIssuePullRequests` handler | `server/cmd/forge/cmd_issue.go:507` | new citation |
+| Calls `GET /api/issues/<id>/pull-requests` | `server/cmd/forge/cmd_issue.go:522` | `:522` (unchanged) |
 | API route registration | `server/cmd/server/router.go:480` | `:480` (unchanged) |
 | Handler `ListPullRequestsForIssue` → `Queries.ListPullRequestsByIssue` | `server/internal/handler/github.go:466,471` | `:466` (unchanged) |
 | Row → response mapper `issuePullRequestRowToResponse` | `server/internal/handler/github.go:149` | new citation |
@@ -70,7 +70,7 @@ auto-link flag (`workspaceAutoLinkPRsEnabled`, `github.go:1074`).
 
 Every `PREFIX-NUMBER` mention in **title, body, or branch** resolves to an issue
 in the workspace and writes a link row (`LinkIssueToPullRequest`, ~`github.go:762`).
-This is what `multica issue pull-requests` later reads back.
+This is what `forge issue pull-requests` later reads back.
 
 Drifted from the prior skill's `github.go:727` citation, which pointed at the old
 call-site location for the link logic.
@@ -104,19 +104,33 @@ Net: a bare title prefix (`MUL-2759: ...`) or a branch ref links only;
 | `shouldEnqueueAgentTask` returns false for `backlog` (parking lot) | `server/internal/handler/issue.go:2644-2648` | new citation |
 | Backlog → non-backlog (not done/cancelled) enqueues on update | `server/internal/handler/issue.go:2537-2540` | `:2523` |
 | Same contract in batch update | `server/internal/handler/issue.go:3021-3024` | new citation |
-| Child → `done` posts a system comment on the parent | `server/internal/handler/issue_child_done.go:51` (`notifyParentOfChildDone`; doc comment at `:15`) | func def `:51` |
+| Child → `done` notifies + wakes the parent, gated by the stage barrier | `server/internal/handler/issue_child_done.go:66` (`notifyParentOfChildDone`; doc comment at `:15`; barrier gate at `:115`) | func def `:51` |
 
 Creation with `--status todo` (or any non-backlog status) on an agent-assigned
 issue fires the agent immediately; `--status backlog` parks it with the assignee
 set but no trigger. Promoting `backlog → todo` later fires it then (update path,
 line 2537).
 
+## Sub-issue stages (barrier wake)
+
+| Behavior | File:line |
+|---|---|
+| `issue.stage` column (nullable, `>= 1`) | `server/migrations/123_issue_stage.up.sql` |
+| Stage barrier: notify+wake fire only when the lowest unfinished stage is all-terminal; unstaged set = one implicit stage | `server/internal/handler/issue_child_done.go:231` (`stageBarrierClosed`) |
+| Per-stage summary + next stage for the wake comment | `server/internal/handler/issue_child_done.go:254` (`stageProgressSummary`) |
+| `--stage` on `issue create` / `issue update` | `server/cmd/forge/cmd_issue.go:328,350` |
+| `forge issue children <id>` (sub-issues grouped by stage) | `server/cmd/forge/cmd_issue.go:114,678`; route `GET /api/issues/{id}/children` → `ListChildIssues` |
+
+Advancement is agent-driven: the server only detects the closed barrier and
+wakes the parent assignee. Promoting the next stage's `backlog` sub-issues to
+`todo` is the woken agent's decision, not a server side effect.
+
 ## Metadata CLI
 
 | Behavior | File:line |
 |---|---|
-| `multica issue metadata set <issue-id> --key --value [--type]` | `server/cmd/multica/cmd_issue_metadata.go:80,109-111` |
-| `multica issue metadata delete <issue-id> --key` | `server/cmd/multica/cmd_issue_metadata.go:93,113` |
+| `forge issue metadata set <issue-id> --key --value [--type]` | `server/cmd/forge/cmd_issue_metadata.go:80,109-111` |
+| `forge issue metadata delete <issue-id> --key` | `server/cmd/forge/cmd_issue_metadata.go:93,113` |
 | API routes (PUT/DELETE `/metadata/{key}`) | `server/cmd/server/router.go:478-479` |
 
 `--value` is JSON-parsed by default (bool/number sniff); `--type` forces
@@ -128,7 +142,7 @@ Re-derive any line above before depending on it:
 
 ```bash
 cd server
-grep -n 'pull-requests <id>'                 cmd/multica/cmd_issue.go
+grep -n 'pull-requests <id>'                 cmd/forge/cmd_issue.go
 grep -n 'ListPullRequestsForIssue'           cmd/server/router.go internal/handler/github.go
 grep -n 'func issuePullRequestRowToResponse\|type GitHubPullRequestResponse struct\|func derivePRState\|func extractIdentifiers\|func extractClosingIdentifiers\|closingIdentifierRe' internal/handler/github.go
 grep -n 'extractIdentifiers(\|extractClosingIdentifiers(\|derivePRState(' internal/handler/github.go

@@ -153,7 +153,6 @@ export function RuntimesPage({
 
   const myRole = members.find((m) => m.user_id === currentUserId)?.role ?? null;
   const isAdmin = myRole === "owner" || myRole === "admin";
-  // RBAC: after all hooks — non-admins redirected to home
   if (!isAdmin && myRole !== null) {
     navigation.push("/");
     return null;

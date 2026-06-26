@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { headers } from "next/headers";
 import { Inter, Geist_Mono, Fraunces } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -37,7 +38,7 @@ const geistMono = Geist_Mono({
 // accents (e.g. "...on one shared board."). Only loaded on routes that
 // render the font; layout-shift-prevention handled by next/font's synthetic
 // fallback metrics, same as Inter.
-const fraunces = Fraunces({
+const sourceSerif = Fraunces({
   subsets: ["latin"],
   style: ["normal", "italic"],
   variable: "--font-serif",
@@ -63,31 +64,31 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL("https://forge.asymbl.app"),
   title: {
-    default: "Forge — Asymbl's AI-native project workspace",
+    default: "Forge — Project Management for Human + Agent Teams",
     template: "%s | Forge",
   },
   description:
-    "Asymbl Forge — AI-native project workspace where agents are first-class teammates. Assign work, track status, and ship together.",
+    "Open-source platform that turns coding agents into real teammates. Assign tasks, track progress, compound skills.",
   icons: {
-    icon: [
-      { url: "/brand/favicon.png", type: "image/png", sizes: "any" },
-      { url: "/brand/favicon-32.png", type: "image/png", sizes: "32x32" },
-      { url: "/brand/favicon-16.png", type: "image/png", sizes: "16x16" },
-    ],
-    shortcut: ["/brand/favicon.png"],
-    apple: [{ url: "/brand/apple-touch-icon.png", sizes: "180x180" }],
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: ["/favicon.svg"],
   },
   openGraph: {
     type: "website",
     siteName: "Forge",
     locale: "en_US",
   },
+  twitter: {
+    card: "summary_large_image",
+    site: "@asymbl_hq",
+    creator: "@asymbl_hq",
+  },
   alternates: {
     canonical: "/",
   },
   robots: {
-    index: false,
-    follow: false,
+    index: true,
+    follow: true,
   },
 };
 
@@ -114,9 +115,27 @@ export default async function RootLayout({
     <html
       lang={HTML_LANG[locale]}
       suppressHydrationWarning
-      className={cn("antialiased font-sans h-full", inter.variable, geistMono.variable, fraunces.variable)}
+      className={cn("antialiased font-sans h-full", inter.variable, geistMono.variable, sourceSerif.variable)}
     >
       <body className="h-full overflow-hidden">
+        {/*
+          react-grab: dev-only element inspector. Hold ⌘C (Mac) / Ctrl+C and click
+          any element to copy its source path + line + component stack for pasting
+          to an AI. Opt-in per developer: only loads when VITE_REACT_GRAB is set in
+          a local, gitignored apps/web/.env.local — it never activates for anyone
+          else. Both guards are read server-side, so the <Script> is omitted from
+          the HTML entirely unless you opted in. The VITE_ prefix is shared with the
+          desktop renderer (apps/desktop/src/renderer/src/main.tsx), where Vite only
+          exposes VITE_-prefixed vars to client code, so one var name covers both
+          apps. See https://www.react-grab.com/
+        */}
+        {process.env.NODE_ENV === "development" && process.env.VITE_REACT_GRAB && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
         <ThemeProvider>
           <WebProviders locale={locale} resources={resources}>
             {children}

@@ -231,7 +231,7 @@ check "8.6 Slack hook wired in notification_listeners (NotifyStatusChange)" \
   "grep -q 'slack.NotifyStatusChange' server/cmd/server/notification_listeners.go"
 
 check "8.7 Slack routes have admin RBAC gate (co-located, not just co-present)" \
-  "grep -A3 'integrations/slack' server/cmd/server/router.go | grep -q 'RequireWorkspaceRole'"
+  "grep -A3 '/integrations/slack' server/cmd/server/router.go | grep -q 'RequireWorkspaceRole'"
 
 check "8.8 Slack TestSlackIntegration uses detached context for DB writes" \
   "grep -q 'context.Background.*3.*Second\|statusCtx' server/internal/handler/slack_integration.go"
@@ -288,11 +288,11 @@ echo ""
 # ── 10. Test Infrastructure ───────────────────────────────────────────────────
 echo "[ 10 ] Test Infrastructure"
 
-check "10.1 Middleware Redis tests use isolated DB 14 (not shared DB 1)" \
-  "grep -q 'middlewareTestRedisDB = 14' server/internal/middleware/auth_test.go"
+check "10.1 Middleware Redis tests use isolated DB (not shared DB 1)" \
+  "grep -qE 'redisTestDB = (13|14)|middlewareTestRedisDB = (13|14)' server/internal/middleware/auth_test.go"
 
 check "10.2 Flaky auth cache test uses dedicated DB constant" \
-  "grep -q 'opts.DB = middlewareTestRedisDB' server/internal/middleware/auth_test.go"
+  "grep -qE 'opts\.DB = (redisTestDB|middlewareTestRedisDB)' server/internal/middleware/auth_test.go"
 
 echo ""
 

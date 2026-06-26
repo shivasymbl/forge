@@ -252,6 +252,9 @@ func newAPIClient(cmd *cobra.Command) (*cli.APIClient, error) {
 	if inAgentExecutionContext() && !strings.HasPrefix(token, "mat_") {
 		return nil, fmt.Errorf("agent execution context requires MULTICA_TOKEN to be a task-scoped mat_ token")
 	}
+	if inAgentExecutionContext() && !strings.HasPrefix(token, "mat_") {
+		return nil, fmt.Errorf("agent execution context requires MULTICA_TOKEN to be a task-scoped mat_ token")
+	}
 
 	client := cli.NewAPIClient(serverURL, workspaceID, token)
 	// When running inside a daemon task, attribute actions to the agent.

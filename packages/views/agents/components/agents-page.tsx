@@ -18,7 +18,6 @@ import type {
   Agent,
   AgentRuntime,
   AgentTemplate,
-  AgentTemplateSummary,
   CreateAgentRequest,
   MemberWithUser,
 } from "@multica/core/types";
@@ -220,7 +219,7 @@ function PageHeaderBar({
           <Button
             type="button"
             size="sm"
-            variant="ghost"
+            variant="outline"
             className="h-8 gap-1 px-2.5"
             onClick={onBrowseTemplates}
           >
@@ -807,119 +806,6 @@ function AgentBatchToolbar({
 }
 
 // ---------------------------------------------------------------------------
-// Template browser modal
-// ---------------------------------------------------------------------------
-
-function TemplateBrowserModal({
-  onClose,
-  onSelect,
-}: {
-  onClose: () => void;
-  onSelect: (
-    slug: string,
-    detail: Pick<AgentTemplate, "name" | "description" | "instructions">,
-  ) => void;
-}) {
-  const { data: templates = [], isLoading } = useQuery(
-    agentTemplateListOptions(),
-  );
-  const [fetchingSlug, setFetchingSlug] = useState<string | null>(null);
-  const qc = useQueryClient();
-
-  const handleSelect = async (summary: AgentTemplateSummary) => {
-    setFetchingSlug(summary.slug);
-    try {
-      const detail = await qc.fetchQuery(
-        agentTemplateDetailOptions(summary.slug),
-      );
-      onSelect(detail.slug, {
-        name: detail.name,
-        description: detail.description,
-        instructions: detail.instructions,
-      });
-    } finally {
-      setFetchingSlug(null);
-    }
-  };
-
-  // Group by category; uncategorized templates go under an empty-string key.
-  const grouped = useMemo(() => {
-    const map = new Map<string, AgentTemplateSummary[]>();
-    for (const t of templates) {
-      const key = t.category ?? "";
-      const bucket = map.get(key) ?? [];
-      bucket.push(t);
-      map.set(key, bucket);
-    }
-    return map;
-  }, [templates]);
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Browse Templates</DialogTitle>
-          <DialogDescription>
-            Pick a template to pre-fill the new agent form.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto py-1">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : templates.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              No templates available.
-            </p>
-          ) : (
-            Array.from(grouped.entries()).map(([category, items]) => (
-              <div key={category || "__uncategorized"} className="mb-4">
-                {category && (
-                  <p className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {category}
-                  </p>
-                )}
-                <div className="flex flex-col gap-1">
-                  {items.map((tmpl) => (
-                    <button
-                      key={tmpl.slug}
-                      type="button"
-                      disabled={fetchingSlug !== null}
-                      onClick={() => handleSelect(tmpl)}
-                      className="flex w-full items-start gap-3 rounded-md px-2 py-2 text-left transition-colors hover:bg-accent disabled:opacity-50"
-                    >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
-                        <Bot className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="truncate text-sm font-medium">
-                            {tmpl.name}
-                          </span>
-                          {fetchingSlug === tmpl.slug && (
-                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                          )}
-                        </div>
-                        {tmpl.description && (
-                          <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {tmpl.description}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
@@ -950,12 +836,12 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
   const [duplicateTemplate, setDuplicateTemplate] = useState<Agent | null>(
     null,
   );
-  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
-    new Set(),
-  );
   const [showTemplateBrowser, setShowTemplateBrowser] = useState(false);
   const [selectedTemplateSlug, setSelectedTemplateSlug] = useState<string | null>(null);
   const [selectedTemplateDetail, setSelectedTemplateDetail] = useState<Pick<AgentTemplate, "name" | "description" | "instructions"> | null>(null);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(
+    new Set(),
+  );
 
   const rawScope = useAgentsViewStore((s) => s.scope);
   const scope = AGENT_SCOPES.includes(rawScope) ? rawScope : "mine";
@@ -1141,7 +1027,7 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
   const handleCreate = async (data: CreateAgentRequest): Promise<Agent> => {
     let agent: Agent;
     if (selectedTemplateSlug) {
-      const result = await api.createAgentFromTemplate({
+      const resp = await api.createAgentFromTemplate({
         template_slug: selectedTemplateSlug,
         name: data.name,
         runtime_id: data.runtime_id,
@@ -1152,7 +1038,7 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
         instructions: data.instructions,
         avatar_url: data.avatar_url,
       });
-      agent = result.agent;
+      agent = resp.agent;
     } else {
       agent = await api.createAgent(data);
     }
@@ -1380,6 +1266,7 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
           onCreate={handleCreate}
         />
       )}
+
       {showTemplateBrowser && (
         <TemplateBrowserModal
           onClose={() => setShowTemplateBrowser(false)}
@@ -1392,5 +1279,119 @@ export function AgentsPage(_props: AgentsPageProps = {}) {
         />
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Template browser modal
+// ---------------------------------------------------------------------------
+
+function TemplateBrowserModal({
+  onClose,
+  onSelect,
+}: {
+  onClose: () => void;
+  onSelect: (
+    slug: string,
+    detail: Pick<AgentTemplate, "name" | "description" | "instructions">,
+  ) => void;
+}) {
+  const { data: templates = [], isLoading } = useQuery(
+    agentTemplateListOptions(),
+  );
+  const qc = useQueryClient();
+  const [fetchingSlug, setFetchingSlug] = useState<string | null>(null);
+
+  // Group by category; uncategorised falls into "General"
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof templates>();
+    for (const t of templates) {
+      const cat = t.category ?? "General";
+      const existing = map.get(cat) ?? [];
+      existing.push(t);
+      map.set(cat, existing);
+    }
+    return map;
+  }, [templates]);
+
+  const handleSelect = async (slug: string) => {
+    setFetchingSlug(slug);
+    try {
+      const detail = await qc.fetchQuery(agentTemplateDetailOptions(slug));
+      onSelect(slug, {
+        name: detail.name,
+        description: detail.description,
+        instructions: detail.instructions,
+      });
+    } finally {
+      setFetchingSlug(null);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Browse Templates</DialogTitle>
+          <DialogDescription>
+            Choose a template to pre-fill the agent configuration.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto py-2">
+          {isLoading ? (
+            <div className="flex flex-col gap-2 px-1">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-md" />
+              ))}
+            </div>
+          ) : templates.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No templates available.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-6 px-1">
+              {[...grouped.entries()].map(([category, items]) => (
+                <div key={category}>
+                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {category}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {items.map((tmpl) => (
+                      <button
+                        key={tmpl.slug}
+                        type="button"
+                        disabled={fetchingSlug !== null}
+                        onClick={() => handleSelect(tmpl.slug)}
+                        className="flex items-start gap-3 rounded-md border border-transparent px-3 py-2.5 text-left transition-colors hover:border-border hover:bg-muted/50 disabled:opacity-50"
+                      >
+                        <Bot className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium leading-tight">
+                            {tmpl.name}
+                          </p>
+                          {tmpl.description && (
+                            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {tmpl.description}
+                            </p>
+                          )}
+                        </div>
+                        {fetchingSlug === tmpl.slug && (
+                          <Loader2 className="ml-auto mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

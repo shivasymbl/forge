@@ -1,10 +1,6 @@
 "use client";
 
-<<<<<<< HEAD
-import { useCallback, useEffect, useState } from "react";
-=======
 import { useCallback, useEffect, useMemo, useState } from "react";
->>>>>>> v0.3.31
 import { Loader2, ScrollText } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "@multica/ui/lib/utils";

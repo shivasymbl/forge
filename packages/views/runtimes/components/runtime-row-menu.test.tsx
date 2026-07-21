@@ -148,10 +148,7 @@ function renderActionsCell(row: RuntimeRow) {
       <QueryClientProvider client={qc}>
         <RuntimeRowMenu
           runtime={row.runtime}
-<<<<<<< HEAD
-=======
           profile={row.profile}
->>>>>>> v0.3.31
           wsId="ws-1"
           canDelete={row.canDelete}
         />

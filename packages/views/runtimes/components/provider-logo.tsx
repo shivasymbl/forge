@@ -277,13 +277,8 @@ export function ProviderLogo({
       return <KimiLogo className={className} />;
     case "kiro":
       return <KiroLogo className={className} />;
-<<<<<<< HEAD
-    case "gemini":
-      return <GeminiLogo className={className} />;
-=======
     case "qoder":
       return <QoderLogo className={className} />;
->>>>>>> v0.3.31
     case "antigravity":
       return <AntigravityLogo className={className} />;
     default:

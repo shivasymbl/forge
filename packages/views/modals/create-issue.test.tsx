@@ -782,11 +782,6 @@ describe("CreateIssueModal", () => {
         }}
         isExpanded={false}
         setIsExpanded={vi.fn()}
-<<<<<<< HEAD
-        backlogHintIssueId={null}
-        setBacklogHintIssueId={vi.fn()}
-=======
->>>>>>> v0.3.31
       />,
     );
 

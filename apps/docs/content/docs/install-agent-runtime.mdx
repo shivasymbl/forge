@@ -1,19 +1,11 @@
 ---
 title: Install an agent runtime
-<<<<<<< HEAD
-description: Multica drives whichever AI coding tools you have on your machine. This page shows you how to install each of the 12 supported tools so the daemon can detect them.
-=======
 description: Multica drives whichever AI coding tools you have on your machine. This page shows you how to install each of the 13 supported tools so the daemon can detect them.
->>>>>>> v0.3.31
 ---
 
 import { Callout } from "fumadocs-ui/components/callout";
 
-<<<<<<< HEAD
-A **runtime** in Multica is the daemon on your machine paired with one AI coding tool the daemon found on your `PATH`. If the onboarding "Connect a runtime" step shows **No supported tools detected**, it means the daemon scanned `PATH` and didn't find any of the 12 tools it knows how to drive. Install one (or several) of the tools below, then come back to the step and re-scan — the runtime will show up within a few seconds.
-=======
 A **runtime** in Multica is the daemon on your machine paired with one AI coding tool the daemon found on your `PATH`. If the onboarding "Connect a runtime" step shows **No supported tools detected**, it means the daemon scanned `PATH` and didn't find any of the 13 tools it knows how to drive. Install one (or several) of the tools below, then come back to the step and re-scan — the runtime will show up within a few seconds.
->>>>>>> v0.3.31
 
 This page is the install-side companion to:
 
@@ -39,15 +31,9 @@ multica daemon restart
 
 Or, in the desktop app, just relaunch the app. The daemon re-scans `PATH` on every start.
 
-<<<<<<< HEAD
-## The 12 supported tools
-
-Listed roughly from most to least common. Pick whichever ones you already have credentials for — you don't need all 12.
-=======
 ## The 13 supported tools
 
 Listed roughly from most to least common. Pick whichever ones you already have credentials for — you don't need all 13.
->>>>>>> v0.3.31
 
 ### Claude Code (Anthropic)
 
@@ -151,8 +137,6 @@ Minimalist. **Session resumption is unusual** — the resume id is the path to a
 | Install | See Inflection's CLI docs at [pi.ai](https://pi.ai/). |
 | Authentication | Per the vendor's docs. |
 
-<<<<<<< HEAD
-=======
 ### CodeBuddy (Tencent)
 
 A Claude Code–compatible CLI agent. Multica drives it with the same stream-json protocol as Claude Code: session resumption works via `--resume`, MCP config is passed through `--mcp-config`, and skills land in `.claude/skills/`. Models are discovered dynamically.
@@ -173,7 +157,6 @@ Agentic coding CLI using the ACP protocol over stdio (shares the transport with 
 | Install | See the official CLI docs at [qoder.com/cli](https://qoder.com/cli). |
 | Authentication | Per the vendor's docs. |
 
->>>>>>> v0.3.31
 ### Antigravity (Google)
 
 Google's Antigravity CLI (`agy`). Pairs with Google's Antigravity service and runs Gemini-backed models. Session resumption works through `--conversation <id>`, captured by the daemon from the CLI log file. Model selection is managed inside the Antigravity CLI itself — Multica disables the per-agent model picker for this provider. Skills are written to `.agents/skills/` (the CLI inherits Gemini CLI's workspace skill layout — see [Antigravity docs](https://antigravity.google/docs/gcli-migration)).

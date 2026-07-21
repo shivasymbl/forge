@@ -72,15 +72,12 @@ import {
 } from "@multica/ui/components/ui/tooltip";
 import { EmojiPicker } from "@multica/ui/components/common/emoji-picker";
 import { BreadcrumbHeader } from "../../layout/breadcrumb-header";
-<<<<<<< HEAD
-=======
 import {
   AnimatedRightSidebar,
   getAnimatedRightSidebarInitialOpen,
   rightSidebarPanelMotionProps,
   useAnimatedRightSidebarState,
 } from "../../layout/animated-right-sidebar";
->>>>>>> v0.3.31
 import {
   AlertDialog,
   AlertDialogAction,

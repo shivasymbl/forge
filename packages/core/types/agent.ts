@@ -63,10 +63,6 @@ export const RUNTIME_PROFILE_PROTOCOL_FAMILIES = [
   "opencode",
   "openclaw",
   "hermes",
-<<<<<<< HEAD
-  "gemini",
-=======
->>>>>>> v0.3.31
   "pi",
   "cursor",
   "kimi",

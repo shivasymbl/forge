@@ -263,8 +263,6 @@ describe("project progress invalidation", () => {
   });
 });
 
-<<<<<<< HEAD
-=======
 describe("onIssueUpdated — position move is surgical, not a list refetch", () => {
   let qc: QueryClient;
 
@@ -443,7 +441,6 @@ describe("onIssueUpdated — off-screen status change reconciles column counts",
   });
 });
 
->>>>>>> v0.3.31
 describe("onIssueDeleted", () => {
   let qc: QueryClient;
 

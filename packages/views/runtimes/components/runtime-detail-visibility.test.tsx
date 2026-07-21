@@ -244,8 +244,6 @@ describe("RuntimeDetail visibility section", () => {
       screen.queryByRole("button", { name: /Delete runtime/i }),
     ).not.toBeInTheDocument();
   });
-<<<<<<< HEAD
-=======
 
   it("routes custom runtime deletion through the profile delete dialog for admins", async () => {
     const profile = makeProfile();
@@ -285,5 +283,4 @@ describe("RuntimeDetail visibility section", () => {
       screen.queryByRole("button", { name: /Delete runtime/i }),
     ).not.toBeInTheDocument();
   });
->>>>>>> v0.3.31
 });

@@ -91,8 +91,6 @@ describe("ApiClient schema fallback", () => {
     });
   });
 
-<<<<<<< HEAD
-=======
   describe("searchIssues", () => {
     it("falls back to an empty result when the response is malformed", async () => {
       stubFetchJson({ issues: "not-an-array", total: 0 });
@@ -111,7 +109,6 @@ describe("ApiClient schema fallback", () => {
     });
   });
 
->>>>>>> v0.3.31
   describe("listAutopilots", () => {
     const baseAutopilot = {
       id: "ap-1",

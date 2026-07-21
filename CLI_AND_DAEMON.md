@@ -670,10 +670,7 @@ multica autopilot delete <id>
 ```
 
 `--mode` accepts `create_issue` (creates a new issue on each run and assigns it to the agent) or `run_only` (enqueues a direct agent task without creating an issue). `--agent` accepts either a name or UUID.
-<<<<<<< HEAD
-=======
 `--subscriber` accepts a workspace member name or user ID and may be repeated; on update it replaces the autopilot's subscriber template. Subscribers receive inbox notifications for issues created by a `create_issue` autopilot. Use `--clear-subscribers` to remove all autopilot subscribers.
->>>>>>> v0.3.31
 
 ### Manual Trigger
 

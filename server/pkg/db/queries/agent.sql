@@ -206,11 +206,7 @@ RETURNING *;
 -- paths (issue status flips to cancelled/done, etc.) left agents stuck at
 -- status="working" with no self-correction.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE issue_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -220,11 +216,7 @@ RETURNING *;
 -- rerun flow so re-running the assignee doesn't collateral-cancel a
 -- still-running @-mention agent on the same issue.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE issue_id = $1 AND agent_id = $2 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -235,11 +227,7 @@ RETURNING *;
 -- (also :many + RETURNING + completed_at) so the three sibling cancel paths
 -- behave consistently.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE agent_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -250,11 +238,7 @@ RETURNING *;
 -- because the FK ON DELETE SET NULL would otherwise nullify trigger_comment_id
 -- and we'd lose the ability to find the affected tasks.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE trigger_comment_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -265,11 +249,7 @@ RETURNING *;
 -- the FK ON DELETE SET NULL would otherwise nullify chat_session_id and we
 -- could no longer reach those tasks.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE chat_session_id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -351,17 +331,6 @@ WHERE id = (
 )
 RETURNING *;
 
-<<<<<<< HEAD
--- name: StartAgentTask :one
--- Transitions a task to running. Accepts either 'dispatched' (the normal
--- claim → run flow) or 'waiting_local_directory' (the daemon held the row in
--- a wait state while another task owned the local_directory path lock; once
--- the lock was acquired the daemon flips here). wait_reason is cleared on
--- the transition so a future read can't conflate "currently waiting" with
--- "previously waited".
-UPDATE agent_task_queue
-SET status = 'running', started_at = now(), wait_reason = NULL
-=======
 -- name: ExtendAgentTaskPrepareLease :one
 -- Keeps a dispatched task protected while the daemon resolves/cache/materializes
 -- startup inputs before StartTask. Once the daemon stops extending this short
@@ -387,7 +356,6 @@ SET status = 'running',
     started_at = now(),
     wait_reason = NULL,
     prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE id = $1 AND status IN ('dispatched', 'waiting_local_directory')
 RETURNING *;
 
@@ -402,13 +370,9 @@ RETURNING *;
 -- mark an already-running or terminal task as waiting; the StartAgentTask
 -- mutation handles the reverse transition once the lock is acquired.
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'waiting_local_directory', wait_reason = $2
-=======
 SET status = 'waiting_local_directory',
     wait_reason = $2,
     prepare_lease_expires_at = now() + make_interval(secs => @prepare_lease_secs::double precision)
->>>>>>> v0.3.31
 WHERE id = $1 AND status = 'dispatched'
 RETURNING *;
 
@@ -493,12 +457,8 @@ SET status = 'failed',
     error = $2,
     failure_reason = COALESCE(sqlc.narg('failure_reason'), 'agent_error'),
     session_id = COALESCE(sqlc.narg('session_id'), session_id),
-<<<<<<< HEAD
-    work_dir = COALESCE(sqlc.narg('work_dir'), work_dir)
-=======
     work_dir = COALESCE(sqlc.narg('work_dir'), work_dir),
     prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE id = $1 AND status IN ('dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -524,12 +484,8 @@ SET status = 'failed',
     completed_at = now(),
     error = 'daemon restarted while task was in flight',
     failure_reason = 'runtime_recovery',
-<<<<<<< HEAD
-    wait_reason = NULL
-=======
     wait_reason = NULL,
     prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE runtime_id = $1 AND status IN ('dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
@@ -537,12 +493,9 @@ RETURNING *;
 -- Fails tasks stuck in dispatched/running beyond the given thresholds.
 -- Handles cases where the daemon is alive but the task is orphaned
 -- (e.g. agent process hung, daemon failed to report completion).
-<<<<<<< HEAD
-=======
 -- Dispatched tasks with an active prepare lease are excluded because the
 -- daemon is still proving liveness while resolving/cache/preparing startup
 -- inputs before StartTask.
->>>>>>> v0.3.31
 -- waiting_local_directory rows are intentionally excluded: the daemon owns
 -- the wait (with its own ctx-driven timeout) and a legitimate queue ahead
 -- of this task can exceed the dispatch / running timeouts without being
@@ -605,25 +558,18 @@ RETURNING t.*;
 
 -- name: CancelAgentTask :one
 UPDATE agent_task_queue
-<<<<<<< HEAD
-SET status = 'cancelled', completed_at = now()
-=======
 SET status = 'cancelled', completed_at = now(), prepare_lease_expires_at = NULL
->>>>>>> v0.3.31
 WHERE id = $1 AND status IN ('queued', 'dispatched', 'running', 'waiting_local_directory')
 RETURNING *;
 
 -- name: CountRunningTasks :one
 SELECT count(*) FROM agent_task_queue
 WHERE agent_id = $1 AND status IN ('dispatched', 'running', 'waiting_local_directory');
-<<<<<<< HEAD
-=======
 
 -- name: GetAgentForClaimUpdate :one
 SELECT * FROM agent
 WHERE id = $1
 FOR UPDATE;
->>>>>>> v0.3.31
 
 -- name: HasActiveTaskForIssue :one
 -- Returns true if there is any queued, dispatched, waiting_local_directory,

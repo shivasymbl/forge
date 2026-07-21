@@ -334,8 +334,6 @@ describe("DeleteRuntimeDialog", () => {
     ).toBeInTheDocument();
   });
 
-<<<<<<< HEAD
-=======
   it("explains that deleting a profile-backed runtime only removes the current instance", () => {
     renderDialog({
       runtime: makeRuntime({
@@ -371,7 +369,6 @@ describe("DeleteRuntimeDialog", () => {
     ).toBeInTheDocument();
   });
 
->>>>>>> v0.3.31
   it("renders the self-heal banner in cascade mode for an online local runtime with bound agents", () => {
     renderDialog({
       runtime: makeRuntime({ runtime_mode: "local", status: "online" }),

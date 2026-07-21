@@ -227,18 +227,6 @@ export function DeleteRuntimeDialog({
 }
 
 // ---------------------------------------------------------------------------
-<<<<<<< HEAD
-// Self-heal notice — informational banner shown when the runtime is a live
-// local daemon that re-registers itself within seconds of a server-side
-// delete. Replaces the old "block the affordance and toast on attempt"
-// dance (MUL-3352): the owner now sees the warning *before* confirming
-// rather than discovering it only after they've been told they cannot
-// proceed.
-// ---------------------------------------------------------------------------
-
-function SelfHealNotice({ runtime }: { runtime: AgentRuntime }) {
-  const { t } = useT("runtimes");
-=======
 // Persistence notice — informational banner shown when deleting the runtime
 // row may not permanently remove the runnable backend. Profile-backed custom
 // runtimes win over the generic local-daemon warning: stopping the daemon is
@@ -258,7 +246,6 @@ function DeletePersistenceNotice({ runtime }: { runtime: AgentRuntime }) {
       </div>
     );
   }
->>>>>>> v0.3.31
   if (!isSelfHealingRuntime(runtime)) return null;
   return (
     <div
@@ -300,11 +287,7 @@ function LightBody({
             name: runtime.name,
           })}
         </p>
-<<<<<<< HEAD
-        <SelfHealNotice runtime={runtime} />
-=======
         <DeletePersistenceNotice runtime={runtime} />
->>>>>>> v0.3.31
       </div>
       <div className="border-t bg-muted/25 px-5 py-3">
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -380,11 +363,7 @@ function CascadeBody({
           })}
         </p>
 
-<<<<<<< HEAD
-        <SelfHealNotice runtime={runtime} />
-=======
         <DeletePersistenceNotice runtime={runtime} />
->>>>>>> v0.3.31
 
         {/* Destructive banner — keep the user's eye on the irreversible
             half before they scan the agent table. */}

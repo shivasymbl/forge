@@ -89,15 +89,12 @@ import { ProgressRing } from "./progress-ring";
 import { matchesPinyin } from "../../editor/extensions/pinyin-match";
 import { useT } from "../../i18n";
 import { useIssueDetailScrollRestore } from "../hooks/use-issue-detail-scroll-restore";
-<<<<<<< HEAD
-=======
 import {
   AnimatedRightSidebar,
   getAnimatedRightSidebarInitialOpen,
   rightSidebarPanelMotionProps,
   useAnimatedRightSidebarState,
 } from "../../layout/animated-right-sidebar";
->>>>>>> v0.3.31
 
 function SubscriberPopoverContent({
   members,

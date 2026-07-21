@@ -101,18 +101,12 @@ CI runs Node 22, Go 1.26.1, and a `pgvector/pgvector:pg17` PostgreSQL service.
 - Code comments must be English.
 - Prefer existing patterns/components over new parallel abstractions.
 - Avoid broad refactors unless required by the task.
-<<<<<<< HEAD
-- New global (pre-workspace) routes MUST use a single word (`/login`, `/inbox`) or a `/{noun}/{verb}` pair (`/workspaces/new`). NEVER add hyphenated word-group root routes (`/new-workspace`, `/create-team`) — they collide with common user workspace names and force endless reserved-slug audits. Reserving the noun (`workspaces`) automatically protects the entire `/workspaces/*` subtree.
-- The reserved-slug list lives in **one** place: `server/internal/handler/reserved_slugs.json`. The Go side embeds the JSON; `packages/core/paths/reserved-slugs.ts` is generated from it by `pnpm generate:reserved-slugs`. Edit the JSON, run the generator, commit both. CI re-runs the generator and fails on any drift, so a stale TS file cannot land.
-- When you change a CLI command or flag, an API request/response field, or product behavior that a built-in skill documents (`server/internal/service/builtin_skills/*`), update that skill's `SKILL.md` **and** its `references/*-source-map.md` in the same PR. The built-in skills are source-traced contracts shipped to agents — if the code moves and the skill doesn't, it silently teaches stale behavior.
-=======
 - For internal, non-boundary code, do not add compatibility layers, fallback paths, dual writes, legacy adapters, or temporary shims unless explicitly requested.
 - API boundaries are different: installed desktop clients can talk to newer backends, so response parsing must follow the API compatibility rules below.
 - If a flow or API is being replaced and the product is not live, prefer removing the old path instead of preserving both.
-- New global pre-workspace routes must be a single word (`/login`, `/inbox`) or `/{noun}/{verb}` (`/workspaces/new`). Do not add hyphenated root routes like `/new-workspace`.
-- Reserved slugs live in `server/internal/handler/reserved_slugs.json`. Edit it, run `pnpm generate:reserved-slugs`, and commit the generated `packages/core/paths/reserved-slugs.ts`.
-- When changing CLI commands/flags, API fields, or product behavior documented by built-in skills under `server/internal/service/builtin_skills/*`, update the relevant `SKILL.md` and `references/*-source-map.md` in the same PR.
->>>>>>> v0.3.31
+- New global (pre-workspace) routes MUST use a single word (`/login`, `/inbox`) or a `/{noun}/{verb}` pair (`/workspaces/new`). NEVER add hyphenated word-group root routes (`/new-workspace`, `/create-team`) — they collide with common user workspace names and force endless reserved-slug audits. Reserving the noun (`workspaces`) automatically protects the entire `/workspaces/*` subtree.
+- The reserved-slug list lives in **one** place: `server/internal/handler/reserved_slugs.json`. The Go side embeds the JSON; `packages/core/paths/reserved-slugs.ts` is generated from it by `pnpm generate:reserved-slugs`. Edit the JSON, run the generator, commit both. CI re-runs the generator and fails on any drift, so a stale TS file cannot land.
+- When you change a CLI command or flag, an API request/response field, or product behavior that a built-in skill documents (`server/internal/service/builtin_skills/*`), update that skill's `SKILL.md` **and** its `references/*-source-map.md` in the same PR. The built-in skills are source-traced contracts shipped to agents — if the code moves and the skill doesn't, it silently teaches stale behavior.
 
 ## API Compatibility
 
@@ -228,7 +222,6 @@ Do not claim verification passed unless you ran it. If you skip checks because t
 
 ## Domain Reminders
 
-<<<<<<< HEAD
 1. Create a tag on the `main` branch: `git tag v0.x.x`
 2. Push the tag: `git push origin v0.x.x`
 3. GitHub Actions automatically triggers `release.yml`: runs Go tests → GoReleaser builds multi-platform binaries → publishes to GitHub Releases + Homebrew tap
@@ -310,7 +303,3 @@ Manual shortcut: `echo 'KEY=val' >> /root/.env && docker compose ... --force-rec
 `retry: false` stops retries but not window-focus refetches.
 For admin-only queries: `enabled: isAdmin` prevents the request entirely.
 `isAdmin` must be derived from `memberListOptions` placed BEFORE the gated `useQuery` in the hook list.
-=======
-- All queries filter by `workspace_id`; membership gates access; `X-Workspace-ID` selects the workspace.
-- Issue assignees are polymorphic: `assignee_type` plus `assignee_id` can reference a member or an agent.
->>>>>>> v0.3.31

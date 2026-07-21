@@ -83,8 +83,6 @@ export const issueKeys = {
   /** PREFIX for invalidation — the composer hook appends parent + content signature. */
   commentTriggerPreview: (issueId: string) =>
     [...issueKeys.commentTriggerPreviewAll(), issueId] as const,
-<<<<<<< HEAD
-=======
   /** Prefix across all issue-trigger previews (assign/status/create/batch).
    *  WS task lifecycle events invalidate here so the answer revalidates when an
    *  agent's queue state changes (the status source's pending dedup makes it
@@ -93,7 +91,6 @@ export const issueKeys = {
   /** PREFIX — the picker hook appends a signature of the prospective write. */
   issueTriggerPreview: (signature: string) =>
     [...issueKeys.issueTriggerPreviewAll(), signature] as const,
->>>>>>> v0.3.31
   reactionsAll: () => ["issues", "reactions"] as const,
   reactions: (issueId: string) =>
     [...issueKeys.reactionsAll(), issueId] as const,

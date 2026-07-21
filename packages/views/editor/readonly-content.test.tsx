@@ -276,8 +276,6 @@ describe("ReadonlyContent code styling", () => {
     expect(blockCode?.textContent?.trim()).toBe(token);
   });
 
-<<<<<<< HEAD
-=======
   it("copies the whole fenced code block from the readonly toolbar", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", {
@@ -296,7 +294,6 @@ describe("ReadonlyContent code styling", () => {
     });
   });
 
->>>>>>> v0.3.31
   it("keeps editor code literal by disabling font ligatures", () => {
     const codeCss = readFileSync("editor/styles/code.css", "utf8");
 

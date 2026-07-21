@@ -436,8 +436,6 @@ describe("AppConfigSchema cdn_signed drift", () => {
     expect(parsed.cdn_signed).toBe(true);
   });
 });
-<<<<<<< HEAD
-=======
 
 describe("InboxUnreadSummarySchema", () => {
   const ENDPOINT = { endpoint: "GET /api/inbox/unread-summary" };
@@ -478,4 +476,3 @@ describe("InboxUnreadSummarySchema", () => {
     ).toBe(EMPTY_INBOX_UNREAD_SUMMARY);
   });
 });
->>>>>>> v0.3.31

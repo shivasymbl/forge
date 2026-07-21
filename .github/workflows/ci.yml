@@ -113,14 +113,9 @@ jobs:
           git diff --exit-code -- packages/core/paths/reserved-slugs.ts
 
       - name: Build, type check, lint, and test
-<<<<<<< HEAD
-        # Mobile lives in a parallel mobile-verify workflow (path-filtered
-        # to apps/mobile/** + packages/core/types/**) so it doesn't add
-=======
         if: ${{ needs.changes.outputs.frontend == 'true' }}
         # Mobile lives in a parallel mobile-verify workflow (path-filtered
         # to apps/mobile/** + packages/core/**) so it doesn't add
->>>>>>> v0.3.31
         # ~50s of expo-lint + tsc to every web/desktop PR. Keep this
         # filter in sync with the root package.json scripts, which also
         # exclude @multica/mobile.

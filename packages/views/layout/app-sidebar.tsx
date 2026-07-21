@@ -357,7 +357,10 @@ export function AppSidebar({ topSlot, searchSlot, headerClassName, headerStyle }
   const workspaceCreationDisabled = useConfigStore((s) => s.workspaceCreationDisabled);
 
   const wsId = workspace?.id;
-  const { data: wsMembers = [] } = useQuery(memberListOptions(wsId));
+  const { data: wsMembers = [] } = useQuery({
+    ...memberListOptions(wsId ?? ""),
+    enabled: !!wsId,
+  });
   const isWorkspaceAdmin = wsMembers.find((m) => m.user_id === userId)?.role === "owner" ||
     wsMembers.find((m) => m.user_id === userId)?.role === "admin";
   const { data: inboxItems = EMPTY_INBOX } = useQuery({

@@ -26,10 +26,7 @@ import {
 import { agentTaskSnapshotOptions } from "@multica/core/agents";
 import {
   deriveRuntimeHealth,
-<<<<<<< HEAD
-=======
   runtimeProfileListOptions,
->>>>>>> v0.3.31
   runtimeUsageOptions,
 } from "@multica/core/runtimes";
 import { useWorkspacePaths } from "@multica/core/paths";
@@ -57,10 +54,7 @@ import { useViewingTimezone } from "../../common/use-viewing-timezone";
 import { ProviderLogo } from "./provider-logo";
 import { HealthIcon, useHealthLabel } from "./shared";
 import { DeleteRuntimeDialog } from "./delete-runtime-dialog";
-<<<<<<< HEAD
-=======
 import { DeleteRuntimeProfileDialog } from "./delete-runtime-profile-dialog";
->>>>>>> v0.3.31
 import {
   computeCostInWindow,
   formatLastSeen,
@@ -68,10 +62,7 @@ import {
 } from "../utils";
 import { splitRuntimeName } from "./runtime-machines";
 import {
-<<<<<<< HEAD
-=======
   customRuntimeRegistrationFailure,
->>>>>>> v0.3.31
   isPendingCustomRuntime,
   isPendingCustomRuntimeWarning,
   pendingRuntimeCommandName,
@@ -146,10 +137,7 @@ const EMPTY_WORKLOAD: RuntimeWorkload = {
 
 export interface RuntimeRow {
   runtime: AgentRuntime;
-<<<<<<< HEAD
-=======
   profile: RuntimeProfile | null;
->>>>>>> v0.3.31
   ownerMember: MemberWithUser | null;
   workload: RuntimeWorkload;
   canDelete: boolean;
@@ -286,8 +274,6 @@ function HealthCell({
   const { t } = useT("runtimes");
   const { t: tAgents } = useT("agents");
   const labelOf = useHealthLabel();
-<<<<<<< HEAD
-=======
   const registrationFailure = customRuntimeRegistrationFailure(runtime);
   if (registrationFailure) {
     return (
@@ -302,7 +288,6 @@ function HealthCell({
       </ListGridCell>
     );
   }
->>>>>>> v0.3.31
   if (isPendingCustomRuntime(runtime)) {
     const warning = isPendingCustomRuntimeWarning(runtime, now);
     return (
@@ -404,8 +389,6 @@ export function CostCell({ runtimeId }: { runtimeId: string }) {
 
 export function CliCell({ runtime }: { runtime: AgentRuntime }) {
   const { t } = useT("runtimes");
-<<<<<<< HEAD
-=======
   const failure = customRuntimeRegistrationFailure(runtime);
   if (failure) {
     const command = pendingRuntimeCommandName(runtime);
@@ -425,7 +408,6 @@ export function CliCell({ runtime }: { runtime: AgentRuntime }) {
       </div>
     );
   }
->>>>>>> v0.3.31
   if (isPendingCustomRuntime(runtime)) {
     const command = pendingRuntimeCommandName(runtime);
     if (!command) {
@@ -509,27 +491,18 @@ function AgentStack({ agentIds }: { agentIds: string[] }) {
 
 export function RuntimeRowMenu({
   runtime,
-<<<<<<< HEAD
-=======
   profile,
->>>>>>> v0.3.31
   wsId,
   canDelete,
 }: {
   runtime: AgentRuntime;
-<<<<<<< HEAD
-=======
   profile: RuntimeProfile | null;
->>>>>>> v0.3.31
   wsId: string;
   canDelete: boolean;
 }) {
   const { t } = useT("runtimes");
   const [deleteOpen, setDeleteOpen] = useState(false);
-<<<<<<< HEAD
-=======
   const isCustomRuntime = !!runtime.profile_id;
->>>>>>> v0.3.31
   // Delete is currently the only row action; if the row can't run it, drop
   // the kebab entirely so the column doesn't render an empty popover. We
   // used to also hide it for self-healing runtimes (live local daemon
@@ -567,18 +540,6 @@ export function RuntimeRowMenu({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-<<<<<<< HEAD
-      <DeleteRuntimeDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        runtime={runtime}
-        wsId={wsId}
-        onDeleted={() => {
-          setDeleteOpen(false);
-          toast.success(t(($) => $.detail.toast_deleted));
-        }}
-      />
-=======
       {isCustomRuntime && profile ? (
         <DeleteRuntimeProfileDialog
           open={deleteOpen}
@@ -599,7 +560,6 @@ export function RuntimeRowMenu({
           }}
         />
       )}
->>>>>>> v0.3.31
     </>
   );
 }
@@ -633,10 +593,7 @@ export function RuntimeList({
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: snapshot = [] } = useQuery(agentTaskSnapshotOptions(wsId));
-<<<<<<< HEAD
-=======
   const { data: profiles = [] } = useQuery(runtimeProfileListOptions(wsId));
->>>>>>> v0.3.31
 
   const currentMember = user
     ? members.find((m) => m.user_id === user.id)
@@ -674,19 +631,6 @@ export function RuntimeList({
   }, [runtimes]);
 
   const rows = useMemo<RuntimeRow[]>(() => {
-<<<<<<< HEAD
-    return runtimes.map((runtime) => ({
-      runtime,
-      ownerMember: runtime.owner_id
-        ? memberById.get(runtime.owner_id) ?? null
-        : null,
-      workload: workloadIndex.get(runtime.id) ?? EMPTY_WORKLOAD,
-      canDelete:
-        !isPendingCustomRuntime(runtime) &&
-        (isAdmin || (!!user && runtime.owner_id === user.id)),
-    }));
-  }, [runtimes, memberById, workloadIndex, isAdmin, user]);
-=======
     return runtimes.map((runtime) => {
       const profile = runtime.profile_id
         ? profileById.get(runtime.profile_id) ?? null
@@ -707,7 +651,6 @@ export function RuntimeList({
       };
     });
   }, [runtimes, profileById, memberById, workloadIndex, isAdmin, user]);
->>>>>>> v0.3.31
 
   // Mirrors RuntimeRowMenu's render guard: the kebab track only earns its
   // width when at least one row will actually show the menu.
@@ -800,10 +743,7 @@ export function RuntimeList({
                 >
                   <RuntimeRowMenu
                     runtime={row.runtime}
-<<<<<<< HEAD
-=======
                     profile={row.profile}
->>>>>>> v0.3.31
                     wsId={wsId}
                     canDelete={row.canDelete}
                   />

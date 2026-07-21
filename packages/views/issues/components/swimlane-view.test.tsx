@@ -1092,10 +1092,7 @@ describe("SwimLaneView", () => {
     expect(mockOnMoveIssue).toHaveBeenCalledWith(
       "issue-c",
       expect.objectContaining({ project_id: "proj-1", status: "todo" }),
-<<<<<<< HEAD
-=======
       expect.any(Function),
->>>>>>> v0.3.31
     );
   });
 
@@ -1118,10 +1115,7 @@ describe("SwimLaneView", () => {
     expect(mockOnMoveIssue).toHaveBeenCalledWith(
       "issue-a",
       expect.objectContaining({ project_id: null, status: "in_review" }),
-<<<<<<< HEAD
-=======
       expect.any(Function),
->>>>>>> v0.3.31
     );
   });
 
@@ -1204,10 +1198,7 @@ describe("SwimLaneView", () => {
         assignee_id: "user-1",
         status: "in_review",
       }),
-<<<<<<< HEAD
-=======
       expect.any(Function),
->>>>>>> v0.3.31
     );
   });
 
@@ -1234,10 +1225,7 @@ describe("SwimLaneView", () => {
         assignee_id: null,
         status: "done",
       }),
-<<<<<<< HEAD
-=======
       expect.any(Function),
->>>>>>> v0.3.31
     );
   });
 
@@ -1294,10 +1282,7 @@ describe("SwimLaneView", () => {
       parent_issue_id: null,
       project_id: null,
       position: 10,
-<<<<<<< HEAD
-=======
       stage: null,
->>>>>>> v0.3.31
       start_date: null,
       due_date: null,
       metadata: {},
@@ -1371,10 +1356,7 @@ describe("SwimLaneView", () => {
       parent_issue_id: null,
       project_id: null,
       position: 50,
-<<<<<<< HEAD
-=======
       stage: null,
->>>>>>> v0.3.31
       start_date: null,
       due_date: null,
       metadata: {},
@@ -1455,10 +1437,7 @@ describe("SwimLaneView", () => {
       parent_issue_id: null,
       project_id: null,
       position: 10,
-<<<<<<< HEAD
-=======
       stage: null,
->>>>>>> v0.3.31
       start_date: null,
       due_date: null,
       metadata: {},
@@ -1552,10 +1531,7 @@ describe("SwimLaneView", () => {
       parent_issue_id: null,
       project_id: null,
       position: 10,
-<<<<<<< HEAD
-=======
       stage: null,
->>>>>>> v0.3.31
       start_date: null,
       due_date: null,
       metadata: {},

@@ -161,11 +161,7 @@ export function RuntimeDetail({ runtime }: { runtime: AgentRuntime }) {
           </span>
         }
         actions={
-<<<<<<< HEAD
-          !canDelete ? (
-=======
           !canEditRuntime ? (
->>>>>>> v0.3.31
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Lock className="h-3 w-3" />
               {t(($) => $.detail.read_only)}
@@ -486,12 +482,6 @@ function DiagnosticsCard({
 }) {
   const { t } = useT("runtimes");
   const isLocal = runtime.runtime_mode === "local";
-<<<<<<< HEAD
-  // canDelete here doubles as the "can edit runtime" predicate — it already
-  // means "workspace owner/admin OR runtime owner", which is the same gate
-  // the server enforces for the visibility PATCH.
-=======
->>>>>>> v0.3.31
   return (
     <div className="rounded-lg border">
       <div className="border-b px-4 py-2.5">

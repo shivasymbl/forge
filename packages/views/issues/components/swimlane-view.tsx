@@ -1072,13 +1072,6 @@ export function SwimLaneView({
         return;
       }
 
-<<<<<<< HEAD
-      onMoveIssue(activeId, {
-        ...targetLane.moveUpdates,
-        status: finalOverCell.status as IssueStatus,
-        position: newPosition,
-      });
-=======
       isSettlingRef.current = true;
       onMoveIssue(
         activeId,
@@ -1092,7 +1085,6 @@ export function SwimLaneView({
           setSettleVersion((v) => v + 1);
         },
       );
->>>>>>> v0.3.31
     },
     [cells, cellSet, laneByKey, laneGroups, onMoveIssue, swimlaneGrouping, viewStoreApi],
   );

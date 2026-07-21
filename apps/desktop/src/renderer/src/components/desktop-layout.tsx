@@ -49,26 +49,6 @@ function WindowToolbar() {
         className="flex items-center gap-1 pl-[70px]"
         style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
       >
-<<<<<<< HEAD
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={!canGoBack}
-          aria-label="Go back"
-          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-        >
-          <ChevronLeft className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={goForward}
-          disabled={!canGoForward}
-          aria-label="Go forward"
-          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-        >
-          <ChevronRight className="size-4" />
-        </button>
-=======
         <SidebarTrigger
           className="size-7 text-muted-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
@@ -97,7 +77,6 @@ function WindowToolbar() {
             <ChevronRight className="size-4" />
           </button>
         </div>
->>>>>>> v0.3.31
       </div>
     </div>
   );

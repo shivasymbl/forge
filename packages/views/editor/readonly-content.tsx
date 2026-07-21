@@ -160,8 +160,6 @@ function ProjectMentionLink({ projectId, label }: { projectId: string; label?: s
   );
 }
 
-<<<<<<< HEAD
-=======
 function getTextContent(node: ReactNode): string {
   if (node == null || typeof node === "boolean") return "";
   if (typeof node === "string" || typeof node === "number") return String(node);
@@ -212,7 +210,6 @@ function ReadonlyCodeBlock({ children }: { children: ReactNode }) {
   );
 }
 
->>>>>>> v0.3.31
 // Named component so it can call useWorkspaceSlug() — arrow function inlined
 // inside `components` below would still work, but extracting it keeps the
 // hook usage explicit and avoids hook-in-object-literal surprises.
@@ -457,22 +454,7 @@ export const ReadonlyContent = memo(function ReadonlyContent({
   return (
     <AttachmentDownloadProvider attachments={attachments}>
       <div ref={wrapperRef} className={cn("rich-text-editor readonly text-sm", className)}>
-<<<<<<< HEAD
-        <ReactMarkdown
-          remarkPlugins={[
-            [remarkMath, { singleDollarTextMath: false }],
-            remarkBreaks,
-            [remarkGfm, { singleTilde: false }],
-          ]}
-          rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema], rehypeKatex]}
-          urlTransform={urlTransform}
-          components={components}
-        >
-          {processed}
-        </ReactMarkdown>
-=======
         {markdown}
->>>>>>> v0.3.31
         <LinkHoverCard {...hover} />
       </div>
     </AttachmentDownloadProvider>

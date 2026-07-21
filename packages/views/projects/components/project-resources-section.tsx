@@ -408,11 +408,8 @@ function ResourceRow({
   const { t } = useT("projects");
   if (isGithubRef(resource)) {
     const ref = resource.resource_ref;
-<<<<<<< HEAD
-=======
     const display = resource.label || (ref.ref ? `${ref.url} @ ${ref.ref}` : ref.url);
     const tooltip = ref.ref ? `${ref.url}\nref: ${ref.ref}` : ref.url;
->>>>>>> v0.3.31
     return (
       <div className="flex items-center gap-2 text-xs group">
         <FolderGit className="size-3.5 text-muted-foreground shrink-0" />

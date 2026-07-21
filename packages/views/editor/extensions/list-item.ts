@@ -1,9 +1,5 @@
 import { type Editor, InputRule } from "@tiptap/core";
 import { ListItem, TaskItem } from "@tiptap/extension-list";
-<<<<<<< HEAD
-
-/**
-=======
 import { sinkListItem as pmSinkListItem } from "@tiptap/pm/schema-list";
 import { type Command, TextSelection } from "@tiptap/pm/state";
 import type { NodeType } from "@tiptap/pm/model";
@@ -66,7 +62,6 @@ function sinkListItemRange(itemType: NodeType): Command {
 }
 
 /**
->>>>>>> v0.3.31
  * Shared list keymap with proper "double-Enter exits list" behaviour.
  *
  * Tiptap's stock `Enter: splitListItem` is incomplete. `splitListItem` itself
@@ -84,9 +79,6 @@ function sinkListItemRange(itemType: NodeType): Command {
  * empty items are unaffected because `splitListItem` handles them correctly
  * and returns true.
  *
-<<<<<<< HEAD
- * Tab / Shift-Tab indent / dedent the item.
-=======
  * Tab indents the item(s) — see `sinkListItemRange` for the multi-item
  * first-item handling. Shift-Tab dedents via the stock command.
  *
@@ -97,7 +89,6 @@ function sinkListItemRange(itemType: NodeType): Command {
  * next control. So the return value tracks "is the caret in this list?"
  * (`editor.isActive(name)`), NOT "did the indent move anything?": indent
  * best-effort, then swallow while in a list, fall through (focus nav) when not.
->>>>>>> v0.3.31
  */
 function listItemKeymap(editor: Editor, name: string) {
   return {
@@ -106,9 +97,6 @@ function listItemKeymap(editor: Editor, name: string) {
         () => commands.splitListItem(name),
         () => commands.liftListItem(name),
       ]),
-<<<<<<< HEAD
-    Tab: () => editor.commands.sinkListItem(name),
-=======
     Tab: () => {
       const itemType = editor.schema.nodes[name];
       if (!itemType) return false;
@@ -117,7 +105,6 @@ function listItemKeymap(editor: Editor, name: string) {
       );
       return editor.isActive(name);
     },
->>>>>>> v0.3.31
     "Shift-Tab": () => editor.commands.liftListItem(name),
   };
 }

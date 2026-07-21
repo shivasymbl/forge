@@ -8,9 +8,6 @@ import type { ReactNode } from "react";
 
 import { setApiInstance } from "../api";
 import type { ApiClient } from "../api/client";
-<<<<<<< HEAD
-import { useLoadMoreByAssigneeGroup, useLoadMoreByStatus, useResolveComment } from "./mutations";
-=======
 import {
   useBatchUpdateIssues,
   useLoadMoreByAssigneeGroup,
@@ -18,7 +15,6 @@ import {
   useResolveComment,
   useUpdateIssue,
 } from "./mutations";
->>>>>>> v0.3.31
 import {
   issueKeys,
   type IssueSortParam,
@@ -325,8 +321,6 @@ describe("useLoadMoreByAssigneeGroup", () => {
   });
 });
 
-<<<<<<< HEAD
-=======
 describe("useUpdateIssue — optimistic move keeps every bucketed board in sync", () => {
   const sort: IssueSortParam = { sort_by: "position", sort_direction: undefined };
   const myScope = "assigned";
@@ -591,7 +585,6 @@ describe("useBatchUpdateIssues — optimistic patch covers filtered boards too",
   });
 });
 
->>>>>>> v0.3.31
 describe("useResolveComment", () => {
   const ISSUE_ID = "issue-1";
 

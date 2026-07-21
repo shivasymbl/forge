@@ -230,12 +230,9 @@ export async function handleInboxNew(
 ): Promise<void> {
   const sourceWsId = item.workspace_id;
   if (sourceWsId) onInboxNew(qc, sourceWsId, item);
-<<<<<<< HEAD
-=======
   // A new item in ANY workspace can light the workspace-switcher dot, so
   // refresh the cross-workspace summary regardless of the active workspace.
   onInboxSummaryInvalidate(qc);
->>>>>>> v0.3.31
   // Fire a native OS notification only when the app isn't focused. When
   // the user is already looking at Multica, the inbox sidebar's unread
   // styling is enough — no need to interrupt with a banner. `desktopAPI`
@@ -326,12 +323,9 @@ function invalidateWorkspaceScopedQueries(qc: QueryClient): void {
     qc.invalidateQueries({ queryKey: chatKeys.all(wsId) });
     qc.invalidateQueries({ queryKey: labelKeys.all(wsId) });
   }
-<<<<<<< HEAD
-=======
   // Cross-workspace, so outside the wsId guard: a reconnect may have missed
   // inbox events from any workspace, so re-pull the switcher-dot summary.
   onInboxSummaryInvalidate(qc);
->>>>>>> v0.3.31
   // Per-issue caches are keyed without wsId, so the issueKeys.all(wsId)
   // prefix above does not reach them. They rely entirely on WS events for
   // freshness (staleTime: Infinity), so events missed while disconnected
@@ -535,8 +529,6 @@ export function useRealtimeSync(
         // open composer's chips (e.g. an agent finishing its run becomes
         // triggerable again mid-typing).
         qc.invalidateQueries({ queryKey: issueKeys.commentTriggerPreviewAll() });
-<<<<<<< HEAD
-=======
         // Issue-trigger previews (assign/status/create/batch) are deliberately
         // NOT invalidated here. Unlike comment triggers, the assign source
         // (create / assignee change) cancels existing tasks before enqueuing, so
@@ -546,7 +538,6 @@ export function useRealtimeSync(
         // Refetching every mounted preview on every workspace task event caused
         // visible flicker, so the preview now refetches only on input change
         // (signature), mirroring its query design (MUL-3375).
->>>>>>> v0.3.31
       },
     };
 

@@ -42,11 +42,7 @@ import {
   sortUserItemsByRecency,
 } from "./mention-recency";
 import { matchesPinyin } from "./pinyin-match";
-<<<<<<< HEAD
-import { createSuggestionPopupRender } from "./suggestion-popup";
-=======
 import { createSuggestionPopupRender, isPickerAcceptKey } from "./suggestion-popup";
->>>>>>> v0.3.31
 
 // ---------------------------------------------------------------------------
 // Types
@@ -150,9 +146,6 @@ function mergeMentionItems(
 export const MentionList = forwardRef<MentionListRef, MentionListProps>(
   function MentionList({ items, query, command, includeProjectSearch = false }, ref) {
     const { t } = useT("editor");
-<<<<<<< HEAD
-    const [selectedIndex, setSelectedIndex] = useState(0);
-=======
     // Selection is tracked by item identity, NOT by a positional index. The
     // list is re-bucketed by groupItems() and grows asynchronously (server
     // search results), so a slot index is not a stable target — the row under
@@ -161,7 +154,6 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
     // order the popup renders (orderedItems). null means "no explicit pick yet"
     // → the first rendered row is highlighted by default.
     const [selectedKey, setSelectedKey] = useState<string | null>(null);
->>>>>>> v0.3.31
     const [serverItems, setServerItems] = useState<MentionItem[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [searchedQuery, setSearchedQuery] = useState("");
@@ -321,12 +313,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
       );
     }
 
-<<<<<<< HEAD
-    const groups = groupItems(displayItems);
-    const hasContextGroups = displayItems.some((item) => item.group === "current" || item.group === "recent");
-=======
     const hasContextGroups = orderedItems.some((item) => item.group === "current" || item.group === "recent");
->>>>>>> v0.3.31
     const contextLayout = hasContextGroups;
     const groupLabel = (label: string): string => {
       if (label === "Current") return t(($) => $.mention.group_current);
@@ -348,11 +335,7 @@ export const MentionList = forwardRef<MentionListRef, MentionListProps>(
             key={`${item.type}-${item.id}`}
             item={item}
             selected={idx === selectedIndex}
-<<<<<<< HEAD
-            onSelect={() => selectItem(idx)}
-=======
             onSelect={() => selectItem(item)}
->>>>>>> v0.3.31
             buttonRef={(el) => { itemRefs.current[idx] = el; }}
           />
         );

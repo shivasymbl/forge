@@ -223,8 +223,6 @@ export const CommentTriggerPreviewSchema = z.object({
   agents: z.array(CommentTriggerPreviewAgentSchema).default([]),
 }).loose();
 
-<<<<<<< HEAD
-=======
 const IssueTriggerPreviewItemSchema = z.object({
   issue_id: z.string(),
   agent_id: z.string().default(""),
@@ -237,7 +235,6 @@ export const IssueTriggerPreviewSchema = z.object({
   total_count: z.number().default(0),
 }).loose();
 
->>>>>>> v0.3.31
 // Metadata is primitive-only by API/DB contract. Stay lenient on shape:
 // unknown keys land as `unknown` to a caller, but the field itself defaults
 // to {} so consumers never need to nil-guard `issue.metadata`.
@@ -532,10 +529,7 @@ const AgentTaskResponseSchema = z.object({
   attempt: z.number().optional(),
   trigger_comment_id: z.string().optional(),
   trigger_summary: z.string().optional(),
-<<<<<<< HEAD
-=======
   handoff_note: z.string().optional(),
->>>>>>> v0.3.31
   kind: z.string().optional(),
   work_dir: z.string().optional(),
   relative_work_dir: z.string().optional(),
@@ -922,8 +916,6 @@ export const EMPTY_USER: User = {
 };
 
 // ---------------------------------------------------------------------------
-<<<<<<< HEAD
-=======
 // Cross-workspace unread inbox summary (`/api/inbox/unread-summary` GET).
 // One entry per workspace the user belongs to that has unread items; the
 // sidebar derives the workspace-switcher dot from it. Lenient per the usual
@@ -943,7 +935,6 @@ export const InboxUnreadSummarySchema = z.array(
 export const EMPTY_INBOX_UNREAD_SUMMARY: InboxWorkspaceUnread[] = [];
 
 // ---------------------------------------------------------------------------
->>>>>>> v0.3.31
 // Billing schemas (cloud-billing proxy surface)
 //
 // All billing JSON we receive comes from multica-cloud verbatim — we proxy

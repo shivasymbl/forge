@@ -113,27 +113,27 @@ that should not be visible to workspace members.
 **Change:** Added `canCreateAgent`, `canViewRuntimes`, `canConnectRuntime` — all require `isAdminLike` role.
 **Verify:** `grep -q "canCreateAgent" packages/core/permissions/rules.ts`
 
-### 2.6 Agents page — create button gated, runtimeListOptions ordered (F2)
-**File:** `packages/views/agents/components/agents-page.tsx`
-**Changes:**
-- `memberListOptions` query moved before `runtimeListOptions` (hook order change)
-- `PageHeaderBar` receives `isAdmin` prop — button `disabled={!isAdmin}`
-- `EmptyState` conditionally renders create button: `{isAdmin && <Button>}`
-- All `PageHeaderBar` / `EmptyState` call sites pass `isAdmin={isWorkspaceAdmin}`
-**Verify:** `grep -q "isAdmin={isWorkspaceAdmin}" packages/views/agents/components/agents-page.tsx`
+### 2.6 Agent creation studio — blank/template modes gated, AI mode open (F2)
+**File:** `packages/views/agents/components/agent-creation-studio.tsx`
+**Changes (post-v0.4.5, upstream replaced the old modal-based agents-page create flow with a full-page creation studio):**
+- `memberListOptions` query drives `isWorkspaceAdmin` (owner/admin role check against the current user)
+- `ModeChooser` takes optional `onBlank`/`onTemplates` callbacks — omitted (undefined) hides that mode's card entirely instead of rendering a disabled state
+- Call site passes `onBlank={isWorkspaceAdmin ? chooseBlank : undefined}` and `onTemplates={isWorkspaceAdmin ? () => setMode("templates") : undefined}`
+- "Build with AI" (`onAI`) is intentionally left ungated for every member — it posts to `POST /api/agent-builder/sessions`, which upstream itself relaxed to non-admins (MUL-4998); only the blank/template paths hit the admin-gated `POST /api/agents` and `POST /api/agents/from-template`
+**Why:** Upstream's redesign has no restriction on any creation mode; the Forge fork still requires admin/owner to create agents at all (only the AI-conversational path is meant to be open).
+**Verify:** `grep -q "isWorkspaceAdmin" packages/views/agents/components/agent-creation-studio.tsx` and `grep -q 'onTemplates={isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx`
 
-### 2.7 Runtimes page — member redirect + connect button gate (F3)
+### 2.7 Runtimes page — member redirect (F3)
 **File:** `packages/views/runtimes/components/runtimes-page.tsx`
-**Changes:**
-- `memberListOptions` + `isAdmin` computed before `runtimeListOptions` (enabled: isAdmin)
-- Skeleton condition: `isLoading || membersLoading || fetching`
-- After loading: `if (!isAdmin) { navigation.push("/"); return null; }`
-- `PageHeaderBar` / `EmptyState` hide connect button for non-admins
+**Changes (post-v0.4.5, upstream replaced the page's list/header architecture with `CollectionPageHeader`):**
+- `memberListOptions(wsId)` resolves `currentMember`; `isAdmin` is `owner`/`admin` role check
+- `if (!isAdmin && currentMember !== undefined) { navigation.push("/"); return null; }` — gated on `currentMember !== undefined` (not just falsy) so it doesn't flash-redirect before the member list has loaded
+- The whole page redirects non-admins away rather than rendering a disabled connect button, since upstream's redesign has no per-member view of this page at all
 **Verify:** `grep -q "navigation.push" packages/views/runtimes/components/runtimes-page.tsx`
 
 ### 2.8 Runtime detail page — member redirect (F3 detail)
 **File:** `packages/views/runtimes/components/runtime-detail-page.tsx`
-**Change:** Fetches member role; if `!isAdmin && myRole !== null` redirects to `/`.
+**Change:** Fetches member role; if `!isAdmin && currentMember !== undefined` redirects to `/`. Gated on `currentMember` being resolved (not just falsy) so the check doesn't fire before the member list arrives.
 **Why:** Members can navigate directly to `/runtimes/{id}` via URL — must be blocked.
 **Verify:** `grep -q "navigation.push" packages/views/runtimes/components/runtime-detail-page.tsx`
 

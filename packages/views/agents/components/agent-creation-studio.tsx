@@ -8,6 +8,7 @@ import {
   Check,
   ChevronRight,
   FileText,
+  LayoutTemplate,
   Loader2,
   MessageSquare,
   Search,
@@ -127,6 +128,14 @@ export function AgentCreationStudio() {
     runtimeListOptions(wsId),
   );
   const { data: members = [] } = useQuery(memberListOptions(wsId));
+  // Forge fork rule: browsing/using agent templates is admin-only (see
+  // CLAUDE.md's Forge Fork Rules RBAC table). Upstream's redesigned creation
+  // studio has no such restriction, so it's re-applied here as the gate on
+  // the "Browse Templates" entry point below.
+  const isWorkspaceAdmin = currentUser
+    ? members.find((m) => m.user_id === currentUser.id)?.role === "owner" ||
+      members.find((m) => m.user_id === currentUser.id)?.role === "admin"
+    : false;
   const { data: workspaceSkills = [] } = useQuery(skillListOptions(wsId));
   const { data: templates = [], isLoading: templatesLoading } = useQuery(
     agentTemplateListOptions(),
@@ -682,8 +691,9 @@ export function AgentCreationStudio() {
 
       {mode === "choose" && (
         <ModeChooser
-          onBlank={chooseBlank}
+          onBlank={isWorkspaceAdmin ? chooseBlank : undefined}
           onAI={() => setMode("ai")}
+          onTemplates={isWorkspaceAdmin ? () => setMode("templates") : undefined}
         />
       )}
 
@@ -801,18 +811,30 @@ export function AgentCreationStudio() {
 export function ModeChooser({
   onBlank,
   onAI,
+  onTemplates,
 }: {
-  onBlank: () => void;
+  // Blank and template-based creation both post to the admin/owner-gated
+  // POST /api/agents (and /from-template) — see CLAUDE.md's Forge Fork
+  // Rules RBAC table. Omit to hide the option for non-admins; the server
+  // would 403 anyway, so hiding avoids a dead-end form. AI-conversational
+  // creation (POST /api/agent-builder/sessions) is intentionally left open
+  // to every member — upstream itself relaxed this path (MUL-4998).
+  onBlank?: () => void;
   onAI: () => void;
+  onTemplates?: () => void;
 }) {
   const { t } = useT("agents");
   const modes = [
-    {
-      icon: FileText,
-      title: t(($) => $.creation_studio.modes.blank.title),
-      description: t(($) => $.creation_studio.modes.blank.description),
-      action: onBlank,
-    },
+    ...(onBlank
+      ? [
+          {
+            icon: FileText,
+            title: t(($) => $.creation_studio.modes.blank.title),
+            description: t(($) => $.creation_studio.modes.blank.description),
+            action: onBlank,
+          },
+        ]
+      : []),
     {
       icon: MessageSquare,
       title: t(($) => $.creation_studio.modes.ai.title),
@@ -820,6 +842,16 @@ export function ModeChooser({
       action: onAI,
       recommended: true,
     },
+    ...(onTemplates
+      ? [
+          {
+            icon: LayoutTemplate,
+            title: t(($) => $.creation_studio.modes.template.title),
+            description: t(($) => $.creation_studio.modes.template.description),
+            action: onTemplates,
+          },
+        ]
+      : []),
   ];
   return (
     <main className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-10">
@@ -835,7 +867,12 @@ export function ModeChooser({
             {t(($) => $.creation_studio.choose_description)}
           </p>
         </div>
-        <div className="mx-auto mt-9 grid max-w-3xl gap-4 md:grid-cols-2">
+        <div
+          className={cn(
+            "mx-auto mt-9 grid gap-4",
+            modes.length > 2 ? "max-w-5xl md:grid-cols-3" : "max-w-3xl md:grid-cols-2",
+          )}
+        >
           {modes.map(({ icon: Icon, title, description, action, recommended }) => (
             <button
               key={title}

@@ -249,13 +249,9 @@ export interface AgentsPageProps {
 function PageHeaderBar({
   totalCount,
   onCreate,
-  isAdmin,
-  onBrowseTemplates,
 }: {
   totalCount: number;
   onCreate: () => void;
-  isAdmin?: boolean;
-  onBrowseTemplates?: () => void;
 }) {
   const { t } = useT("agents");
   return (

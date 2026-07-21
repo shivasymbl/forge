@@ -80,8 +80,8 @@ check "2.4 daemon.go: PAT path uses requireWorkspaceRole" \
 check "2.5 permissions/rules.ts: canCreateAgent defined" \
   "grep -q 'canCreateAgent' packages/core/permissions/rules.ts"
 
-check "2.6 agents-page: isAdmin prop threaded to PageHeaderBar" \
-  "grep -q 'isAdmin={isWorkspaceAdmin}' packages/views/agents/components/agents-page.tsx"
+check "2.6 agent-creation-studio: isWorkspaceAdmin computed for template gating" \
+  "grep -q 'isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx"
 
 check "2.7 runtimes-page: non-admin redirect" \
   "grep -q 'navigation.push' packages/views/runtimes/components/runtimes-page.tsx"
@@ -92,8 +92,8 @@ check "2.8 runtime-detail-page: non-admin redirect" \
 check "2.9 app-sidebar: Create workspace gated by isWorkspaceAdmin" \
   "grep -q 'isWorkspaceAdmin' packages/views/layout/app-sidebar.tsx"
 
-check "2.10 agents-page: Browse Templates button present and gated (isAdmin)" \
-  "grep -q 'showTemplateBrowser\|TemplateBrowserModal' packages/views/agents/components/agents-page.tsx"
+check "2.10 agent-creation-studio: template mode present and gated (isAdmin)" \
+  "grep -q 'onTemplates={isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx"
 
 echo ""
 
@@ -201,7 +201,7 @@ check "7.12 daemon auth error uses forge login not multica login" \
   "grep -q 'forge login' server/internal/daemon/daemon.go"
 
 check "7.13 AGENTS.md runtime header is Forge Agent Runtime" \
-  "grep -q 'Forge Agent Runtime' server/internal/daemon/execenv/runtime_config.go"
+  "grep -q 'Forge Agent Runtime' server/internal/daemon/execenv/runtime_config_sections.go"
 
 check "7.14 prompt.go workspace is Forge not Multica" \
   "grep -q 'Forge workspace' server/internal/daemon/prompt.go"
@@ -211,11 +211,11 @@ echo ""
 # ── 8. Slack Integration ──────────────────────────────────────────────────────
 echo "[ 8 ] Slack Integration"
 
-check "8.1 Slack migration 089 exists" \
-  "ls server/migrations/089_workspace_slack_integrations.up.sql > /dev/null 2>&1"
+check "8.1 Slack migration 202 exists" \
+  "ls server/migrations/202_workspace_slack_integrations.up.sql > /dev/null 2>&1"
 
-check "8.2 Slack migration 090 FK fix exists (created_by → user not member)" \
-  "ls server/migrations/090_slack_created_by_fk_fix.up.sql > /dev/null 2>&1"
+check "8.2 Slack migration 203 FK fix exists (created_by → user not member)" \
+  "ls server/migrations/203_slack_created_by_fk_fix.up.sql > /dev/null 2>&1"
 
 check "8.3 Slack integration package exists" \
   "test -f server/internal/integrations/slack/notify.go"
@@ -242,11 +242,11 @@ check "8.9 Slack useTestSlackIntegration invalidates query on success" \
 check "8.10 Slack history returned in GET response (soft-delete audit trail)" \
   "grep -q 'ListSlackIntegrationHistoryForWorkspace\|history' server/internal/handler/slack_integration.go"
 
-check "8.11 Slack migration 089 contains workspace_slack_integrations DDL" \
-  "grep -q 'CREATE TABLE.*workspace_slack_integrations' server/migrations/089_workspace_slack_integrations.up.sql"
+check "8.11 Slack migration 202 contains workspace_slack_integrations DDL" \
+  "grep -q 'CREATE TABLE.*workspace_slack_integrations' server/migrations/202_workspace_slack_integrations.up.sql"
 
-check "8.12 Slack migration 090 references correct FK target (user table)" \
-  "grep -q 'REFERENCES \"user\"' server/migrations/090_slack_created_by_fk_fix.up.sql"
+check "8.12 Slack migration 203 references correct FK target (user table)" \
+  "grep -q 'REFERENCES \"user\"' server/migrations/203_slack_created_by_fk_fix.up.sql"
 
 echo ""
 

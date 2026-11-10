@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { MemberWithUser } from "@multica/core/types";
@@ -16,8 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@multica/ui/components/ui/dialog";
-import { Archive, ArchiveRestore, Loader2, X } from "lucide-react";
+import { Archive, ArchiveRestore, Loader2 } from "@multica/ui/icons";
 import { useT } from "../../i18n";
+import { CollectionBatchBar } from "../../layout/collection-list";
 import { AccessPicker, type AccessChange } from "./inspector/access-picker";
 import type { AgentListRow } from "./agents-page";
 
@@ -67,8 +68,6 @@ export function AgentBatchToolbar({
     setConfirmAccess(open);
   }, []);
 
-  if (rows.length === 0) return null;
-
   const allManageable = rows.every((r) => r.canManage);
   const ownedRows = rows.filter((r) => r.isOwnedByMe);
   const anyOwned = ownedRows.length > 0;
@@ -79,6 +78,13 @@ export function AgentBatchToolbar({
     qc.invalidateQueries({ queryKey: workspaceKeys.agents(wsId) });
 
   const accessConfirmEnabled = accessChange !== null;
+
+  useEffect(() => {
+    if (rows.length > 0) return;
+    setConfirmArchive(false);
+    setConfirmAccess(false);
+    setAccessChange(null);
+  }, [rows.length]);
 
   const applyAccessBulk = async (change: AccessChange) => {
     const summary = await runBatch(
@@ -125,21 +131,7 @@ export function AgentBatchToolbar({
 
   return (
     <>
-      <div className="absolute bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-1 rounded-lg border bg-background px-2 py-1.5 shadow-lg">
-        <div className="mr-1 flex items-center gap-1.5 border-r pl-1 pr-2">
-          <span className="text-sm font-medium">
-            {t(($) => $.actions.selected, { count: rows.length })}
-          </span>
-          <button
-            type="button"
-            aria-label={t(($) => $.actions.clear_selection)}
-            onClick={onClear}
-            className="rounded p-0.5 transition-colors hover:bg-accent"
-          >
-            <X className="size-3.5 text-muted-foreground" />
-          </button>
-        </div>
-
+      <CollectionBatchBar count={rows.length} onClear={onClear}>
         {anyArchived && (
           <Button
             variant="ghost"
@@ -179,13 +171,13 @@ export function AgentBatchToolbar({
             {t(($) => $.row_actions.archive)}
           </Button>
         )}
-      </div>
+      </CollectionBatchBar>
 
       {/* Archive confirm dialog */}
-      <Dialog open={confirmArchive} onOpenChange={setConfirmArchive}>
+      {rows.length > 0 && <Dialog open={confirmArchive} onOpenChange={setConfirmArchive}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="break-all">
               {t(($) => $.row_actions.archive_dialog_title, {
                 name:
                   rows.length === 1 && rows[0]
@@ -227,12 +219,12 @@ export function AgentBatchToolbar({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
 
       {/* Bulk access dialog — AccessPicker's internal Save is hidden (hideFooter)
           so this dialog's Confirm button is the sole apply trigger via onChange.
           a11y: focus trap + restore via Dialog; aria-live summary; accessible name. */}
-      <Dialog open={confirmAccess} onOpenChange={setAccessDialogOpen}>
+      {rows.length > 0 && <Dialog open={confirmAccess} onOpenChange={setAccessDialogOpen}>
         <DialogContent
           className="sm:max-w-md"
           aria-describedby="bulk-access-summary"
@@ -290,7 +282,7 @@ export function AgentBatchToolbar({
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog>}
     </>
   );
 }

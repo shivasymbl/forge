@@ -1,9 +1,13 @@
+// @vitest-environment node
+
 import { describe, expect, it } from "vitest";
 import type { AgentRuntime } from "@multica/core/types";
 import {
   buildRuntimeMachines,
+  countRuntimeMachines,
   filterRuntimeMachines,
   runtimeMachineCounts,
+  runtimeRowLabel,
   sharedCustomName,
   splitRuntimeName,
 } from "./runtime-machines";
@@ -124,6 +128,29 @@ describe("runtime machine grouping", () => {
       issues: 1,
     });
     expect(filterRuntimeMachines(machines, "", "issues")).toHaveLength(1);
+  });
+
+  it("keeps long_offline as the highest-severity machine health", () => {
+    const machines = buildRuntimeMachines(
+      [
+        makeRuntime({
+          id: "rt-offline",
+          provider: "claude",
+          status: "offline",
+          last_seen_at: new Date(NOW - 10 * 60_000).toISOString(),
+        }),
+        makeRuntime({
+          id: "rt-long-offline",
+          provider: "codex",
+          status: "offline",
+          last_seen_at: new Date(NOW - 6.5 * 24 * 60 * 60_000).toISOString(),
+        }),
+      ],
+      { now: NOW },
+    );
+
+    expect(machines).toHaveLength(1);
+    expect(machines[0]?.health).toBe("long_offline");
   });
 
   it("does not surface agent CLI version branding as the machine subtitle", () => {
@@ -359,6 +386,31 @@ describe("runtime machine grouping", () => {
   });
 });
 
+describe("countRuntimeMachines", () => {
+  it("matches the machine grouping", () => {
+    const cases: AgentRuntime[][] = [
+      [],
+      Array.from({ length: 6 }, (_, i) => makeRuntime({ id: `rt-${i}` })),
+      [
+        makeRuntime({ id: "rt-1", daemon_id: "daemon-1" }),
+        makeRuntime({ id: "rt-2", daemon_id: "daemon-2" }),
+        makeRuntime({ id: "rt-3", daemon_id: "daemon-2" }),
+      ],
+      [
+        makeRuntime({ id: "rt-legacy-claude", daemon_id: null, name: "Claude (macbook)", device_info: "" }),
+        makeRuntime({ id: "rt-legacy-codex", daemon_id: null, name: "Codex (macbook)", device_info: "" }),
+        makeRuntime({ id: "rt-unnamed", daemon_id: null, name: "Claude", device_info: "" }),
+      ],
+    ];
+    expect(cases.map(countRuntimeMachines)).toEqual([0, 1, 2, 2]);
+    for (const runtimes of cases) {
+      expect(countRuntimeMachines(runtimes)).toBe(
+        buildRuntimeMachines(runtimes, { now: NOW }).length,
+      );
+    }
+  });
+});
+
 describe("splitRuntimeName", () => {
   it("separates daemon host suffix from provider name", () => {
     expect(splitRuntimeName("Claude (build-server-01)")).toEqual({
@@ -402,5 +454,36 @@ describe("sharedCustomName", () => {
       ]),
     ).toBeNull();
     expect(sharedCustomName([])).toBeNull();
+  });
+});
+
+describe("runtimeRowLabel", () => {
+  it("falls back to the provider base when no alias is set", () => {
+    expect(
+      runtimeRowLabel(
+        makeRuntime({ name: "Codex (dev.local)", custom_name: null }),
+        "dev.local",
+      ),
+    ).toBe("Codex");
+  });
+
+  it("collapses a machine-level alias (shared with the title) to the base", () => {
+    // A machine rename stamps the same custom_name on every runtime, so the
+    // title already shows it — repeating it per row would be noise.
+    expect(
+      runtimeRowLabel(
+        makeRuntime({ name: "Codex (dev.local)", custom_name: "Dev Box" }),
+        "Dev Box",
+      ),
+    ).toBe("Codex");
+  });
+
+  it("shows a per-runtime alias that differs from the machine title", () => {
+    expect(
+      runtimeRowLabel(
+        makeRuntime({ name: "Codex (dev.local)", custom_name: "just this one" }),
+        "Dev Box",
+      ),
+    ).toBe("just this one");
   });
 });

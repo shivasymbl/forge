@@ -6,6 +6,13 @@ const ABS_URL = `https://multica-app.copilothub.ai/api/attachments/${UUID}/downl
 const REL_URL = `/api/attachments/${UUID}/download`;
 
 describe("preprocessMobileMarkdown — !file file cards", () => {
+  it("keeps channel images visible while hiding their provenance marker", () => {
+    const image = `![](${REL_URL})`;
+    const marker = `<!-- multica:channel-media:${UUID} -->`;
+
+    expect(preprocessMobileMarkdown(`${image}\n\n${marker}`)).toBe(`${image}\n\n`);
+  });
+
   it("matches the CLI's escaped-bracket label and keeps it markdown-safe", () => {
     // CLI emits `a]b.pdf` escaped as `a\]b.pdf` (cmd_attachment.go
     // escapeMarkdownLabel). The old regex stopped at the first `]` and left the
@@ -51,5 +58,21 @@ describe("preprocessMobileMarkdown — !file file cards", () => {
     const input = `here is the file\n\n!file[a\\]b.pdf](${ABS_URL})\n\nlet me know`;
     const output = `here is the file\n\n[📎 a\\]b.pdf](${ABS_URL})\n\nlet me know`;
     expect(preprocessMobileMarkdown(input)).toBe(output);
+  });
+});
+
+describe("preprocessMobileMarkdown — angle-bracket image destinations", () => {
+  it.each([
+    "![image](<https://cdn.example/a b.png>)",
+    "![image](</uploads/a b.png>)",
+    "![image](</chart v2.png>)",
+    "![image][shot]\n\n[shot]: <https://cdn.example/a b.png>",
+  ])("preserves %s", (content) => {
+    expect(preprocessMobileMarkdown(content)).toBe(content);
+  });
+
+  it("still strips HTML tags while preserving text and hard breaks", () => {
+    expect(preprocessMobileMarkdown('<div class="note">A<br/><b>B</b></div>'))
+      .toBe("A  \nB");
   });
 });

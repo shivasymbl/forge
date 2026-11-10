@@ -356,6 +356,54 @@ check "13.5 runtimes locale step1_label says Forge CLI not Multica CLI" \
 
 echo ""
 
+# ── 14. v0.8.1 sync guards ────────────────────────────────────────────────────
+echo "[ 14 ] v0.8.1 sync guards"
+
+check "14.1 CLI update fetches shivasymbl/forge releases" \
+  "grep -q 'repos/shivasymbl/forge/releases' server/internal/cli/update.go && \
+   ! grep -q 'repos/multica-ai/multica/releases' server/internal/cli/update.go"
+
+check "14.2 deploy.yml publishes forge-backend and forge-web" \
+  "grep -q 'ghcr.io/shivasymbl/forge-backend' .depot/workflows/deploy.yml && \
+   grep -q 'ghcr.io/shivasymbl/forge-web' .depot/workflows/deploy.yml"
+
+check "14.3 CreateAgentFromTemplate is admin/owner gated" \
+  "grep -q 'RequireWorkspaceRole.*CreateAgentFromTemplate' server/cmd/server/router.go"
+
+check "14.4 CreateMikaAgent is admin/owner gated" \
+  "grep -q 'RequireWorkspaceRole.*CreateMikaAgent' server/cmd/server/router.go"
+
+check "14.5 runtime strip clears LaunchHeader and Metadata" \
+  "grep -q 'LaunchHeader = \"\"' server/internal/handler/runtime.go && \
+   grep -F -q 'Metadata = map[string]any{}' server/internal/handler/runtime.go"
+
+check "14.6 goreleaser project and binary stay forge" \
+  "grep -q 'binary: forge' .goreleaser.yml && \
+   grep -q 'project_name: forge' .goreleaser.yml"
+
+check "14.7 go.mod is 1.26.9" \
+  "grep -q '^go 1.26.9' server/go.mod"
+
+check "14.8 web next is ^16.4.5" \
+  "grep -q '\"next\": \"\\^16.4.5\"' apps/web/package.json"
+
+check "14.9 slack 202/203 coexist with upstream 202/203" \
+  "test -f server/migrations/202_workspace_slack_integrations.up.sql && \
+   test -f server/migrations/203_slack_created_by_fk_fix.up.sql && \
+   test -f server/migrations/202_runtime_profile_add_qwen.up.sql && \
+   test -f server/migrations/203_issue_workspace_assignee_index.up.sql"
+
+check "14.10 selfhost compose defaults to Forge images" \
+  "grep -q 'ghcr.io/shivasymbl/forge-backend' docker-compose.selfhost.yml && \
+   grep -q 'ghcr.io/shivasymbl/forge-web' docker-compose.selfhost.yml && \
+   ! grep -q 'ghcr.io/multica-ai/' docker-compose.selfhost.yml"
+
+check "14.11 selfhost compose from-email defaults to forge@asymbl.app" \
+  "grep -q 'forge@asymbl.app' docker-compose.selfhost.yml && \
+   ! grep -q 'noreply@multica.ai' docker-compose.selfhost.yml"
+
+echo ""
+
 # ── Summary ───────────────────────────────────────────────────────────────────
 echo "=== Results: $PASS passed, $FAIL failed ==="
 echo ""

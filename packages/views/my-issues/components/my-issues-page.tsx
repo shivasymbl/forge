@@ -1,64 +1,56 @@
 "use client";
 
-import { useStore } from "zustand";
-import { ListTodo } from "lucide-react";
+import { CircleUser, ListTodo, Plus } from "@multica/ui/icons";
+import { Button } from "@multica/ui/components/ui/button";
 import { useAuthStore } from "@multica/core/auth";
-import {
-  myIssuesViewStore,
-  type MyIssuesScope,
-} from "@multica/core/issues/stores/my-issues-view-store";
+import { myIssuesRelationFromScope } from "@multica/core/issues/stores/my-issues-view-store";
+import { CollectionPageState } from "../../layout/collection-page";
 import { PageHeader } from "../../layout/page-header";
 import { IssueSurface } from "../../issues/surface/issue-surface";
+import { IssueViewHeader } from "../../issue-views/view-header";
 import { useT } from "../../i18n";
-import { MyIssuesHeader } from "./my-issues-header";
+import { useMyIssuesScope } from "../use-my-issues-scope";
 
-function relationFromScope(scope: MyIssuesScope) {
-  return scope === "agents" ? "involved" : scope;
-}
+const MY_BASE = { kind: "my" } as const;
 
 export function MyIssuesPage() {
   const { t } = useT("my-issues");
+  const { t: tIssues } = useT("issues");
   const user = useAuthStore((s) => s.user);
-  const scope = useStore(myIssuesViewStore, (s) => s.scope);
-  const setScope = useStore(myIssuesViewStore, (s) => s.setScope);
+  const scope = useMyIssuesScope();
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
-      <PageHeader className="gap-2">
-        <ListTodo className="h-4 w-4 text-muted-foreground" />
-        <h1 className="text-sm font-medium">{t(($) => $.page.breadcrumb)}</h1>
-      </PageHeader>
-
       {user ? (
         <IssueSurface
           scope={{
             type: "my",
             userId: user.id,
-            relation: relationFromScope(scope),
+            relation: myIssuesRelationFromScope(scope),
           }}
           modes={["board", "list", "table", "swimlane"]}
           batchToolbar="list"
-          renderHeader={({ controller, workingIssues }) => (
-            <MyIssuesHeader
-              allIssues={controller.surfaceIssues}
-              workingIssues={workingIssues}
-              scope={scope}
-              onScopeChange={setScope}
-              isRefreshing={controller.isRefreshing}
-              facetCountsExact={
-                !(controller.viewMode === "table" && controller.hasNextFlatPage)
+          renderHeader={({ controller }) => <IssueViewHeader controller={controller} base={MY_BASE} />}
+          renderEmpty={({ controller }) => (
+            <CollectionPageState
+              icon={CircleUser}
+              title={t(($) => $.page.empty_title)}
+              description={t(($) => $.page.empty_description)}
+              actions={
+                <Button size="sm" onClick={() => controller.openCreateIssue()}>
+                  <Plus aria-hidden="true" />
+                  {tIssues(($) => $.views.new_issue)}
+                </Button>
               }
             />
           )}
-          renderEmpty={() => (
-            <div className="flex flex-1 min-h-0 flex-col items-center justify-center gap-2 text-muted-foreground">
-              <ListTodo className="h-10 w-10 text-muted-foreground/40" />
-              <p className="text-sm">{t(($) => $.page.empty_title)}</p>
-              <p className="text-xs">{t(($) => $.page.empty_description)}</p>
-            </div>
-          )}
         />
-      ) : null}
+      ) : (
+        <PageHeader>
+          <ListTodo className="size-4 text-muted-foreground" />
+          <h1 className="text-body font-medium">{t(($) => $.page.breadcrumb)}</h1>
+        </PageHeader>
+      )}
     </div>
   );
 }

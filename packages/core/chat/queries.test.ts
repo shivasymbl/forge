@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it } from "vitest";
 
 import type { TaskMessagePayload } from "../types/events";
@@ -8,6 +9,7 @@ import {
   mergeTaskMessagesBySeq,
   sortChatSessions,
   taskMessagesOptions,
+  unionTaskMessagesBySeq,
 } from "./queries";
 
 const msg = (seq: number): TaskMessagePayload => ({
@@ -31,6 +33,44 @@ describe("taskMessagesOptions", () => {
 
     expect(isTaskMessageTaskId(taskId)).toBe(false);
     expect(taskMessagesOptions(taskId).enabled).toBe(false);
+  });
+});
+
+describe("unionTaskMessagesBySeq", () => {
+  it("keeps seqs the authoritative list never mentioned", () => {
+    // A REST response snapshotted before seq 3 was persisted must not erase it.
+    const united = unionTaskMessagesBySeq([msg(1), msg(3)], [msg(1), msg(2)]);
+
+    expect(united.map((m) => m.seq)).toEqual([1, 2, 3]);
+  });
+
+  it("lets the authoritative row win on conflict", () => {
+    const live = { ...msg(1), content: "live" };
+    const persisted = { ...msg(1), content: "persisted" };
+
+    const united = unionTaskMessagesBySeq([live], [persisted]);
+
+    expect(united).toEqual([persisted]);
+  });
+
+  it("preserves the base reference when nothing differs", () => {
+    // Identity is what keeps a duplicate event from re-rendering every
+    // subscriber — AssistantMessage memoizes its timeline on this array.
+    const base = [msg(1), msg(2)];
+
+    expect(unionTaskMessagesBySeq(base, [base[0]!, base[1]!])).toBe(base);
+    expect(unionTaskMessagesBySeq(base, [])).toBe(base);
+  });
+
+  it("sorts by seq regardless of arrival order", () => {
+    expect(unionTaskMessagesBySeq([msg(5)], [msg(3), msg(9)]).map((m) => m.seq))
+      .toEqual([3, 5, 9]);
+  });
+
+  it("handles an empty or absent base", () => {
+    expect(unionTaskMessagesBySeq(undefined, [msg(2), msg(1)]).map((m) => m.seq))
+      .toEqual([1, 2]);
+    expect(unionTaskMessagesBySeq([], [msg(1)]).map((m) => m.seq)).toEqual([1]);
   });
 });
 
@@ -102,6 +142,17 @@ describe("sortChatSessions", () => {
     const snapshot = input.map((s) => s.id);
     sortChatSessions(input);
     expect(input.map((s) => s.id)).toEqual(snapshot);
+  });
+
+  it("preserves server order and session identities when activity times tie", () => {
+    const first = session({ id: "first" });
+    const second = session({ id: "second" });
+    const pinned = session({ id: "pinned", pinned: true });
+
+    const sorted = sortChatSessions([first, pinned, second]);
+    expect(sorted).toEqual([pinned, first, second]);
+    expect(sorted[1]).toBe(first);
+    expect(sorted[2]).toBe(second);
   });
 });
 

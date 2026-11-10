@@ -10,10 +10,13 @@ import {
   useShortcutStore,
   type ShortcutActionId,
 } from "@multica/core/shortcuts";
-import { openCreateIssueWithPreference } from "@multica/core/issues/stores";
+import { useChatStore } from "@multica/core/chat";
 import { useModalStore } from "@multica/core/modals";
 import { useWorkspacePaths } from "@multica/core/paths";
 import { isImeComposing } from "@multica/core/utils";
+import { isFloatingChatRouteSuppressed } from "../chat/floating-chat-visibility";
+import { useAppShell } from "./app-shell-context";
+import { openCreateIssueForPath } from "./global-actions";
 import { useNavigation } from "../navigation";
 import { useSearchStore } from "../search/search-store";
 
@@ -21,6 +24,9 @@ const GLOBAL_ACTIONS: readonly ShortcutActionId[] = [
   "openSearch",
   "createIssue",
   "toggleSidebar",
+  "toggleChat",
+  "goBack",
+  "goForward",
   "goInbox",
   "goChat",
   "goMyIssues",
@@ -42,6 +48,7 @@ export function shouldIgnoreGlobalShortcutEvent(event: KeyboardEvent): boolean {
 /** Executes configurable product-level shortcuts inside the dashboard shell. */
 export function GlobalShortcuts() {
   const { toggleSidebar } = useSidebar();
+  const toggleNav = useAppShell()?.toggleNav ?? toggleSidebar;
   const navigation = useNavigation();
   const workspacePaths = useWorkspacePaths();
 
@@ -50,9 +57,10 @@ export function GlobalShortcuts() {
   const overrides = useShortcutStore((state) => state.overrides);
 
   useEffect(() => {
+    const chatPath = workspacePaths.chat();
     const destinations: Partial<Record<ShortcutActionId, string>> = {
       goInbox: workspacePaths.inbox(),
-      goChat: workspacePaths.chat(),
+      goChat: chatPath,
       goMyIssues: workspacePaths.myIssues(),
       goIssues: workspacePaths.issues(),
       goProjects: workspacePaths.projects(),
@@ -65,6 +73,15 @@ export function GlobalShortcuts() {
       goSettings: workspacePaths.settings(),
     };
 
+    // Read at press time rather than subscribing: the preference only matters
+    // the instant the chord fires, and the overlay is gone from the Chat tab.
+    // An unavailable overlay must not claim the chord either — returning false
+    // from the finder leaves the keypress its outside-the-app meaning instead of
+    // swallowing it for an action that would visibly do nothing.
+    const canToggleFloatingChat = () =>
+      useChatStore.getState().floatingChatEnabled &&
+      !isFloatingChatRouteSuppressed(navigation.pathname, chatPath);
+
     const handleKeyDown = (event: KeyboardEvent) => {
       // Component/editor handlers run before this document-level listener.
       // Respect their preventDefault instead of double-triggering a product
@@ -76,6 +93,7 @@ export function GlobalShortcuts() {
         if (!action.allowInEditable && isEditableShortcutTarget(event.target)) {
           return false;
         }
+        if (candidate === "toggleChat" && !canToggleFloatingChat()) return false;
         return shortcutMatchesEvent(getShortcut(candidate), event);
       });
       if (!actionId) return;
@@ -85,19 +103,27 @@ export function GlobalShortcuts() {
         useSearchStore.getState().toggle();
         return;
       }
+      if (actionId === "toggleChat") {
+        useChatStore.getState().toggle();
+        return;
+      }
       if (actionId === "toggleSidebar") {
-        toggleSidebar();
+        toggleNav();
+        return;
+      }
+      if (actionId === "goBack") {
+        navigation.back();
+        return;
+      }
+      if (actionId === "goForward") {
+        // Optional on the adapter: an isolated window without a forward stack
+        // leaves it undefined, in which case the chord is simply a no-op.
+        navigation.forward?.();
         return;
       }
       if (actionId === "createIssue") {
         if (useModalStore.getState().modal) return;
-        const projectMatch = navigation.pathname.match(
-          /^\/[^/]+\/projects\/([^/]+)$/,
-        );
-        const data = projectMatch
-          ? { project_id: projectMatch[1] }
-          : undefined;
-        openCreateIssueWithPreference(data);
+        openCreateIssueForPath(navigation.pathname);
         return;
       }
 
@@ -109,7 +135,7 @@ export function GlobalShortcuts() {
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [navigation, overrides, toggleSidebar, workspacePaths]);
+  }, [navigation, overrides, toggleNav, workspacePaths]);
 
   return null;
 }

@@ -4,7 +4,7 @@ import { AboutPageClient } from "@/features/landing/components/about-page-client
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Learn about Forge — Asymbl's internal AI workforce management platform.",
+    "Learn about Forge — Asymbl's source-available project management platform for human + agent teams.",
   openGraph: {
     title: "About Forge",
     description:

@@ -344,15 +344,33 @@ The live gates were moved, then the dead files were deleted:
 | `pnpm --filter @multica/views exec vitest run layout/rail-workspaces.test.tsx agents/create/runtime-choice-list.test.tsx` | exit 0. 2 files, 20 tests. |
 | `bash scripts/verify-patches.sh` | 99 passed, 0 failed. |
 
-The member and owner browser pass was not repeated. Staging on ports 18884 and 13804 was down. The 2026-11-10 observations above describe the tree before this gate move.
+The 2026-11-10 observations above describe the tree before this gate move. The same-day browser re-check is below.
 
-Merge commits `1d7554dec` and `41fda1aed` are on `origin/sync/upstream-v0.8.1` as draft PR #5 (https://github.com/shivasymbl/forge/pull/5). This fix pass is a later commit on that same branch. Do not merge the PR. `origin/main` is still `48f737e512fa`.
+Merge commits `1d7554dec` and `41fda1aed` are on `origin/sync/upstream-v0.8.1` as draft PR #5 (https://github.com/shivasymbl/forge/pull/5). The gate move is `a81049e12` on that same branch. Do not merge the PR. `origin/main` is still `48f737e512fa`.
+
+### Browser re-check 2026-11-19
+
+Staging was restarted with `make api-dev ENV_FILE=.env.staging` and `make web-dev ENV_FILE=.env.staging` against the existing database `multica_forge_staging_081_804`. API port 18884, web port 13804. Docker Desktop had stopped, so the first owner Continue click got `500 failed to lookup user`. After Docker and the shared `postgres` container were back, `GET /readyz` returned 200 and sign-in worked. Nothing was clicked that creates a workspace, connects a machine, or downloads the desktop app.
+
+Member `forge-staging-member@asymbl.app`, titles ending in `| Forge`:
+
+- Workspace switcher menu was Forge Staging only. No Create workspace item.
+- `/forge-staging/agents/new` (`Create Agent | Forge`) had no Connect a machine button. The Qoder row said "Ask an admin to connect".
+
+Owner `forge-staging-owner@asymbl.app`:
+
+- Account menu showed `forge-staging-owner@asymbl.app`.
+- Workspace switcher included Create workspace, href `/workspaces/new`.
+- `/forge-staging/agents/new` showed Connect a machine. "Ask an admin to connect" was absent.
+- `/forge-staging/runtimes` stayed on that URL (`Runtimes | Forge`) and showed Add runtime. The body was the empty-state carousel, so the runtime four-field strip was not checked against a real runtime row.
+
+Leftover copy seen on that carousel, left as-is: the install snippet still names `multica`, and a button is labeled Ask Multica.
 
 ### Still open after the fix pass
 
 Verdict remains **NO-GO** for `main` and `plan/forge-asymbl-fork`. Merging draft PR #5 deploys the droplet.
 
-- Browser re-check that a member does not see Create workspace or Connect a machine, and that an owner does. The two view tests cover those controls. Staging was not restarted for this pass.
+- Browser re-check of those two controls passed on the restarted staging stack. See [Browser re-check 2026-11-19](#browser-re-check-2026-11-19). The runtime four-field strip still has no live runtime row.
 - Leftover Multica command strings and the three non-English landing privacy blocks.
 - `make sqlc` and the full Go suite. `go build ./...` and `go test ./internal/cli` from 2026-11-10 were not re-run.
 - Depot runner labels in `.depot/workflows/ci.yml` and `deploy.yml` still say `depot-ubuntu-24.04-4`.

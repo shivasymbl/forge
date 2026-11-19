@@ -653,7 +653,7 @@ export function RuntimeChoiceList({
               />
             );
           })}
-          {!searching ? (
+          {!searching && (canManage || hiddenRemoteCount > 0) ? (
             <div className={cn(ROW, "h-10 text-caption text-muted-foreground")}>
               {hiddenRemoteCount > 0 ? (
                 <span className="flex min-w-0 items-center gap-1.5">
@@ -665,14 +665,16 @@ export function RuntimeChoiceList({
                   </span>
                 </span>
               ) : null}
-              <button
-                type="button"
-                onClick={onAddRemote}
-                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <Plus aria-hidden="true" className="size-3.5" />
-                {t(($) => $.creation_studio.runtime_step.add_remote)}
-              </button>
+              {canManage ? (
+                <button
+                  type="button"
+                  onClick={onAddRemote}
+                  className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Plus aria-hidden="true" className="size-3.5" />
+                  {t(($) => $.creation_studio.runtime_step.add_remote)}
+                </button>
+              ) : null}
             </div>
           ) : null}
         </>

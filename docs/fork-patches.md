@@ -113,15 +113,14 @@ that should not be visible to workspace members.
 **Change:** Added `canCreateAgent`, `canViewRuntimes`, `canConnectRuntime` — all require `isAdminLike` role.
 **Verify:** `grep -q "canCreateAgent" packages/core/permissions/rules.ts`
 
-### 2.6 Agent creation studio — blank/template modes gated, AI mode open (F2)
-**File:** `packages/views/agents/components/agent-creation-studio.tsx`
-**Changes (post-v0.4.5, upstream replaced the old modal-based agents-page create flow with a full-page creation studio):**
-- `memberListOptions` query drives `isWorkspaceAdmin` (owner/admin role check against the current user)
-- `ModeChooser` takes optional `onBlank`/`onTemplates` callbacks — omitted (undefined) hides that mode's card entirely instead of rendering a disabled state
-- Call site passes `onBlank={isWorkspaceAdmin ? chooseBlank : undefined}` and `onTemplates={isWorkspaceAdmin ? () => setMode("templates") : undefined}`
-- "Build with AI" (`onAI`) is intentionally left ungated for every member — it posts to `POST /api/agent-builder/sessions`, which upstream itself relaxed to non-admins (MUL-4998); only the blank/template paths hit the admin-gated `POST /api/agents` and `POST /api/agents/from-template`
-**Why:** Upstream's redesign has no restriction on any creation mode; the Forge fork still requires admin/owner to create agents at all (only the AI-conversational path is meant to be open).
-**Verify:** `grep -q "isWorkspaceAdmin" packages/views/agents/components/agent-creation-studio.tsx` and `grep -q 'onTemplates={isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx`
+### 2.6 Agent management and runtime choice — owner/admin only (F2)
+**Files:** `packages/views/agents/components/agents-page.tsx`, `packages/views/agents/create/choose-runtime-page.tsx`, `packages/views/agents/create/runtime-choice-list.tsx`
+**Changes (v0.8.1 removed the creation studio; the live pages own the gate):**
+- `agents-page.tsx` derives `isWorkspaceAdmin` from the member list (`owner` or `admin`) and passes `canManage` on each row
+- `choose-runtime-page.tsx` sets `canManage` from the same role check and passes it into the runtime list
+- `runtime-choice-list.tsx` renders "Connect a machine" only when `canManage` is true. Members still see the locked-remote count
+**Why:** Upstream's create flow is open to members. Forge still requires admin/owner for agent create and for connecting a machine. The server routes stay admin-gated as well.
+**Verify:** `grep -q "isWorkspaceAdmin" packages/views/agents/components/agents-page.tsx`, `grep -q 'const canManage = member?.role === "owner" || member?.role === "admin"' packages/views/agents/create/choose-runtime-page.tsx`, and `grep -B 8 'runtime_step.add_remote' packages/views/agents/create/runtime-choice-list.tsx | grep -q 'canManage ?'`
 
 ### 2.7 Runtimes page — member redirect (F3)
 **File:** `packages/views/runtimes/components/runtimes-page.tsx`
@@ -137,10 +136,10 @@ that should not be visible to workspace members.
 **Why:** Members can navigate directly to `/runtimes/{id}` via URL — must be blocked.
 **Verify:** `grep -q "navigation.push" packages/views/runtimes/components/runtime-detail-page.tsx`
 
-### 2.9 Sidebar — "Create workspace" hidden for members
-**File:** `packages/views/layout/app-sidebar.tsx`
-**Change:** `isWorkspaceAdmin` derived from `memberListOptions`; `Create workspace` menu item only renders when admin.
-**Verify:** `grep -q "isWorkspaceAdmin" packages/views/layout/app-sidebar.tsx`
+### 2.9 Rail — "Create workspace" hidden for members
+**File:** `packages/views/layout/rail-workspaces.tsx`
+**Change:** v0.8.1 replaced the sidebar with the rail. `isWorkspaceAdmin` is derived from `memberListOptions`; the Create workspace menu item renders only for owner or admin, and only when the instance allows workspace creation.
+**Verify:** `grep -q "isWorkspaceAdmin" packages/views/layout/rail-workspaces.tsx`
 
 ---
 

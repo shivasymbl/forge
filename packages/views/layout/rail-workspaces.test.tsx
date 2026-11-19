@@ -16,6 +16,8 @@ const state = vi.hoisted(() => ({
   invalidateQueries: vi.fn(),
   mutations: [] as Array<Record<string, unknown>>,
   workspaceCreationDisabled: false,
+  userId: "user-1" as string | undefined,
+  members: [] as { user_id: string; role: string }[],
   openWorkspaceInNewWindow: undefined as undefined | Mock<(slug: string) => void>,
   workspacesInOtherWindows: undefined as undefined | (() => string[]),
 }));
@@ -64,10 +66,17 @@ vi.mock("@multica/core/inbox/queries", () => ({
   unreadWorkspaceIds: (entries: { workspace_id: string; count: number }[]) =>
     new Set(entries.filter((s) => s.count > 0).map((s) => s.workspace_id)),
 }));
+vi.mock("@multica/core/auth", () => {
+  const useAuthStore = (selector: (s: { user?: { id: string } }) => unknown) =>
+    selector({ user: state.userId ? { id: state.userId } : undefined });
+  useAuthStore.getState = () => ({ user: state.userId ? { id: state.userId } : undefined });
+  return { useAuthStore };
+});
 vi.mock("@multica/core/workspace/queries", () => ({
   myInvitationListOptions: () => ({ queryKey: ["invitations"] }),
   workspaceKeys: { myInvitations: () => ["invitations"] },
   workspaceListOptions: () => ({ queryKey: ["workspaces"] }),
+  memberListOptions: (wsId: string) => ({ queryKey: ["workspaces", wsId, "members"] }),
 }));
 vi.mock("@tanstack/react-query", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-query")>()),
@@ -76,6 +85,7 @@ vi.mock("@tanstack/react-query", async (importOriginal) => ({
     return { isPending: false, mutate: vi.fn() };
   },
   useQuery: ({ queryKey }: { queryKey: readonly unknown[] }) => {
+    if (queryKey[0] === "workspaces" && queryKey[2] === "members") return { data: state.members };
     if (queryKey[0] === "workspaces") return { data: state.workspaces };
     if (queryKey[0] === "invitations") return { data: state.invitations };
     if (queryKey[0] === "inbox") return { data: state.summary };
@@ -102,6 +112,8 @@ beforeEach(() => {
   state.mutations.length = 0;
   state.setPinned.mockClear();
   state.workspaceCreationDisabled = false;
+  state.userId = "user-1";
+  state.members = [{ user_id: "user-1", role: "owner" }];
   state.openWorkspaceInNewWindow = undefined;
   state.workspacesInOtherWindows = undefined;
 });
@@ -188,6 +200,12 @@ describe("RailWorkspaces", () => {
     unmount();
 
     state.workspaceCreationDisabled = true;
+    renderWithI18n(<RailWorkspaces />);
+    expect(within(await openMenu()).queryByRole("menuitem", { name: "Create workspace" })).toBeNull();
+  });
+
+  it("hides workspace creation from members", async () => {
+    state.members = [{ user_id: "user-1", role: "member" }];
     renderWithI18n(<RailWorkspaces />);
     expect(within(await openMenu()).queryByRole("menuitem", { name: "Create workspace" })).toBeNull();
   });

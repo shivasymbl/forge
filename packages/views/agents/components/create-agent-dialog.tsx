@@ -16,7 +16,6 @@ import { COMPOSIO_MCP_APPS_FLAG } from "@multica/core/feature-flags";
 import { workspaceKeys } from "@multica/core/workspace/queries";
 import type {
   Agent,
-  AgentTemplate,
   AgentInvocationTargetInput,
   AgentPermissionMode,
   AgentVisibility,
@@ -74,7 +73,7 @@ export function CreateAgentDialog({
   // a curated agent template — name, description, and instructions are
   // seeded from the template detail. Skills are attached server-side by
   // createAgentFromTemplate, so SkillMultiSelect is hidden in this mode.
-  templateSeed?: Pick<AgentTemplate, "name" | "description" | "instructions"> | null;
+  templateSeed?: { name: string; description: string; instructions: string } | null;
   // When set, every successful create is followed by
   // addSquadMember(squadId, agent) so the new agent joins this squad.
   // If the squad-join call fails the agent still exists and the dialog

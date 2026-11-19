@@ -10,9 +10,11 @@ import {
   inboxUnreadSummaryOptions,
   unreadWorkspaceIds,
 } from "@multica/core/inbox/queries";
+import { useAuthStore } from "@multica/core/auth";
 import { paths, useCurrentWorkspace } from "@multica/core/paths";
-import type { Invitation, Workspace } from "@multica/core/types";
+import type { Invitation, MemberWithUser, Workspace } from "@multica/core/types";
 import {
+  memberListOptions,
   myInvitationListOptions,
   workspaceKeys,
   workspaceListOptions,
@@ -40,6 +42,7 @@ import { WorkspaceAvatar } from "../workspace/workspace-avatar";
 // Stable empty defaults: an inline `= []` is a new array every render.
 const EMPTY_WORKSPACES: Workspace[] = [];
 const EMPTY_INVITATIONS: Invitation[] = [];
+const EMPTY_MEMBERS: MemberWithUser[] = [];
 const EMPTY_INBOX_SUMMARY: Awaited<ReturnType<typeof api.getInboxUnreadSummary>> = [];
 const EMPTY_SLUGS: ReadonlySet<string> = new Set();
 
@@ -205,6 +208,13 @@ export function RailWorkspaces() {
   const workspace = useCurrentWorkspace();
   const wsId = workspace?.id;
   const workspaceCreationDisabled = useConfigStore((s) => s.workspaceCreationDisabled);
+  const userId = useAuthStore((s) => s.user?.id);
+  const { data: members = EMPTY_MEMBERS } = useQuery({
+    ...memberListOptions(wsId ?? ""),
+    enabled: !!wsId,
+  });
+  const memberRole = members.find((member) => member.user_id === userId)?.role;
+  const isWorkspaceAdmin = memberRole === "owner" || memberRole === "admin";
   const { data: workspaces = EMPTY_WORKSPACES } = useQuery(workspaceListOptions());
   const { data: invitations = EMPTY_INVITATIONS } = useQuery(myInvitationListOptions());
   // One cross-workspace cache entry; gated on an active workspace since the
@@ -308,7 +318,7 @@ export function RailWorkspaces() {
             </DropdownMenuGroup>
           </>
         )}
-        {!workspaceCreationDisabled && (
+        {!workspaceCreationDisabled && isWorkspaceAdmin && (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

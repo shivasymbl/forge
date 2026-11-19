@@ -80,8 +80,8 @@ check "2.4 daemon.go: PAT path uses requireWorkspaceRole" \
 check "2.5 permissions/rules.ts: canCreateAgent defined" \
   "grep -q 'canCreateAgent' packages/core/permissions/rules.ts"
 
-check "2.6 agent-creation-studio: isWorkspaceAdmin computed for template gating" \
-  "grep -q 'isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx"
+check "2.6 agents-page: isWorkspaceAdmin computed for owner/admin management" \
+  "grep -q 'isWorkspaceAdmin' packages/views/agents/components/agents-page.tsx"
 
 check "2.7 runtimes-page: non-admin redirect" \
   "grep -q 'navigation.push' packages/views/runtimes/components/runtimes-page.tsx"
@@ -89,11 +89,14 @@ check "2.7 runtimes-page: non-admin redirect" \
 check "2.8 runtime-detail-page: non-admin redirect" \
   "grep -q 'navigation.push' packages/views/runtimes/components/runtime-detail-page.tsx"
 
-check "2.9 app-sidebar: Create workspace gated by isWorkspaceAdmin" \
-  "grep -q 'isWorkspaceAdmin' packages/views/layout/app-sidebar.tsx"
+check "2.9 rail-workspaces: Create workspace gated by isWorkspaceAdmin" \
+  "grep -q 'isWorkspaceAdmin' packages/views/layout/rail-workspaces.tsx"
 
-check "2.10 agent-creation-studio: template mode present and gated (isAdmin)" \
-  "grep -q 'onTemplates={isWorkspaceAdmin' packages/views/agents/components/agent-creation-studio.tsx"
+check "2.10 choose-runtime: canManage is owner or admin" \
+  "grep -q 'const canManage = member?.role === \"owner\" || member?.role === \"admin\"' packages/views/agents/create/choose-runtime-page.tsx"
+
+check "2.11 runtime choice: Connect a machine is admin-only" \
+  "grep -B 8 'runtime_step.add_remote' packages/views/agents/create/runtime-choice-list.tsx | grep -q 'canManage ?'"
 
 echo ""
 
@@ -166,8 +169,8 @@ check "7.1 co-authored-by hook: forge-agent identity" \
 check "7.2 co-authored-by hook: no multica-agent in hook script" \
   "! grep -q 'multica-agent <github@multica.ai>' server/internal/daemon/repocache/cache.go"
 
-check "7.2b github-tab UI shows forge-agent not multica-agent" \
-  "grep -q 'forge-agent <github@asymbl.com>' packages/views/settings/components/github-tab.tsx"
+check "7.2b code-tab UI shows forge-agent not multica-agent" \
+  "grep -q 'forge-agent <github@asymbl.com>' packages/views/settings/components/code-tab.tsx"
 
 check "7.3 desktop app.setName is Forge" \
   "grep -q 'app.setName(\"Forge\")' apps/desktop/src/main/index.ts"

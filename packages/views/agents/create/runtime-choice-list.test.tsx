@@ -162,10 +162,12 @@ describe("RuntimeChoiceList", () => {
     fireEvent.click(screen.getByRole("button", { name: "Connect" }));
     expect(props.onConnectQoder).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: /Qoder Cloud Agents/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Connect a machine" })).toBeInTheDocument();
 
     cleanup();
     mount({ canManage: false });
     expect(screen.queryByRole("button", { name: "Connect" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Connect a machine" })).toBeNull();
     expect(screen.getByText("Ask an admin to connect")).toBeInTheDocument();
   });
 

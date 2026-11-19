@@ -39,7 +39,7 @@ import {
   ObjectSectionCard,
   ObjectSectionEmpty,
 } from "../../layout/object-page";
-import { AppLink } from "../../navigation";
+import { AppLink, useNavigation } from "../../navigation";
 import { buildWorkloadIndex, RuntimeList } from "./runtime-list";
 import {
   buildRuntimeMachines,
@@ -123,6 +123,7 @@ export function RuntimeDetailPage({
   bootstrapping,
 }: RuntimeDetailPageProps) {
   const { t } = useT("runtimes");
+  const navigation = useNavigation();
   const wsId = useWorkspaceId();
   const paths = useWorkspacePaths();
   const qc = useQueryClient();

@@ -270,7 +270,7 @@ Full sync procedure in `docs/fork-patches.md`.
 | Daemon PAT registration | admin/owner only | `server/internal/handler/daemon.go` |
 | Frontend: agents create button | disabled for members | `packages/views/agents/components/agents-page.tsx` |
 | Frontend: runtimes page/detail | redirect members to `/` | `packages/views/runtimes/components/runtimes-page.tsx` + `runtime-detail-page.tsx` |
-| Frontend: "Create workspace" | hidden for members | `packages/views/layout/app-sidebar.tsx` |
+| Frontend: "Create workspace" | hidden for members | `packages/views/layout/rail-workspaces.tsx` |
 
 **mdt_ daemon tokens** (Ben droplets) bypass role checks — only PAT tokens are gated.
 

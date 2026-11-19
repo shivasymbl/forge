@@ -4,7 +4,7 @@ Date: 2026-11-10.
 
 Verdict: **NO-GO** for merging v0.8.1 onto `main` or `plan/forge-asymbl-fork`. Both of those branches trigger the Depot deploy workflow and would ship a new image to the production droplet. A second reviewer (watchdog) agreed with that verdict on the dry run. The local branch `sync/upstream-v0.8.1` now holds the merge. It is still not a production candidate. See [Local staging](#local-staging).
 
-This file records the dry run and the later local staging pass. It does not replace `docs/fork-patches.md`. That file remains the inventory of deliberate Forge patches. Production was not changed. Nothing was pushed. No release tag was cut. Doppler was not read.
+This file records the dry run, the 2026-11-10 local staging pass, and the 2026-11-19 fix pass. It does not replace `docs/fork-patches.md`. That file remains the inventory of deliberate Forge patches. Production was not changed. The sync branch is on draft PR #5 and must stay unmerged. `main` was not pushed. No release tag was cut. Doppler was not read.
 
 ## What was compared
 
@@ -93,6 +93,8 @@ Upstream deleted files this checkout modified. Merge-tree left the checkout copy
 - Builtin skills upstream removed: autopilots, creating-agents, mentioning, projects-and-resources, runtimes-and-repos, skill-importing source map, squad source map, working-on-issues, each with its source map where one exists
 
 `server/internal/agenttmpl` is absent from the v0.8.1 tag (`git cat-file -e v0.8.1:server/internal/agenttmpl` fails: path exists on disk, not in the tag). Checks 9.1–9.10 fail closed once that directory is actually gone. That failure is the desired signal if templates are dropped. If templates are kept, retarget the checks. The raw merge-tree keeps the directory until the modify/delete is accepted, so 9.x can still pass on an uncommitted merge that has not deleted it.
+
+On 2026-11-19 the live gates were moved onto the v0.8.1 pages and the orphan view files in that list were deleted. See [Fix pass 2026-11-19](#fix-pass-2026-11-19).
 
 ### Silent auto-merges
 
@@ -238,7 +240,7 @@ These bullets describe the dry run only. Later checks are in [Local staging](#lo
 
 Checked on 2026-11-10 after the dry run. Branch `sync/upstream-v0.8.1` merges tag `v0.8.1` (`b1ea927def6490c43bedff537b6f4ed9a47fa828`) into the previous checkout `8b1b7e231`. Real conflict markers are resolved. The remaining `<<<<<<<` hits are fixtures in `server/internal/daemon/execenv/local_worktree_test.go`.
 
-Production was not migrated. Nothing was pushed. No tag was cut. Doppler was not read. Caddy on port 8080 was left running. The shared local Postgres container named `postgres` was left running. No other database on it was dropped.
+Production was not migrated. As of this 2026-11-10 pass, nothing was pushed. No tag was cut. Doppler was not read. Caddy on port 8080 was left running. The shared local Postgres container named `postgres` was left running. No other database on it was dropped. The sync branch was pushed later, on 2026-11-19, as draft PR #5. `main` was not part of that push.
 
 ### Isolated database
 
@@ -270,9 +272,9 @@ After the browser pass, `GET /readyz` returned 200 `{"status":"ok","checks":{"db
 
 `pnpm install` printed peer warnings (electron-vite vs Vite 8, fumadocs vs Next 16, packages/ui esbuild). They were not treated as failures.
 
-Not run: `pnpm typecheck`, `make sqlc`, `make test`, the repocache `cache_test` / `identity_test` packages, a daemon protocol check, and a desktop DMG build.
+Not run on 2026-11-10: `pnpm typecheck` (run on 2026-11-19; see [Fix pass 2026-11-19](#fix-pass-2026-11-19)), `make sqlc`, `make test`, the repocache `cache_test` / `identity_test` packages, a daemon protocol check, and a desktop DMG build.
 
-`verify-patches.sh` greps source. A green run does not prove every live UI gate. Check 2.9 looks for `isWorkspaceAdmin` in `packages/views/layout/app-sidebar.tsx`. The switcher that rendered in the browser is `packages/views/layout/rail-workspaces.tsx`.
+`verify-patches.sh` greps source. A green run does not prove every live UI gate. On 2026-11-10, check 2.9 looked for `isWorkspaceAdmin` in `packages/views/layout/app-sidebar.tsx`. The switcher that rendered in the browser is `packages/views/layout/rail-workspaces.tsx`. On 2026-11-19 check 2.9 was retargeted to that file and the orphan sidebar was deleted.
 
 `server/pkg/db/generated/models.go` was hand-closed for the Slack, WorkspaceMcpServer, and WorkspaceShareLink conflicts, then gofmt'd. `make sqlc` was not run. The server binary builds from that tree. `server/internal/handler/agent_template.go` needed a compile fix (`h.agentToResponse` and a `context.Context` on the template skill fetchers) before `go build ./...` passed.
 
@@ -291,11 +293,11 @@ Member `forge-staging-member@asymbl.app` (`2d26a8c4-730e-4686-8d32-9428c3b0af10`
 Member gates:
 
 - `/forge-staging/runtimes` was served (`GET` 200, direct navigation and the sidebar link). The client then returned to `/forge-staging/issues`. The owner session had stayed on that page.
-- `/forge-staging/agents/new` stayed open, title `Create Agent | Forge`. The Qoder row shows "Ask an admin to connect". "Connect a machine" is still on the page. That control is not behind `canManage` in `packages/views/agents/create/runtime-choice-list.tsx`.
+- Observed on 2026-11-10, before the gate move: `/forge-staging/agents/new` stayed open, title `Create Agent | Forge`. The Qoder row shows "Ask an admin to connect". "Connect a machine" was still on the page. At that time the control was not behind `canManage` in `packages/views/agents/create/runtime-choice-list.tsx`.
 - From the member session, `POST /api/agents`, `POST /api/agents/mika`, and `POST /api/agents/from-template` each returned 403 `insufficient permissions`.
 - `POST /api/runtimes` returned 405. The collection route only registers `GET /`.
 - The four-field runtime strip was not observed live. The staging database has no runtime rows. The strip is in `server/internal/handler/runtime.go` and check 14.5 greps it.
-- The open workspace switcher shows a "Create workspace" menuitem whose href is `/workspaces/new`. `rail-workspaces.tsx` renders it when workspace creation is enabled, with no admin check. `app-sidebar.tsx` still gates the same label on `isWorkspaceAdmin`. The member did not follow the link.
+- Observed on 2026-11-10, before the gate move: the open workspace switcher shows a "Create workspace" menuitem whose href is `/workspaces/new`. `rail-workspaces.tsx` rendered it when workspace creation is enabled, with no admin check. `app-sidebar.tsx` still gated the same label on `isWorkspaceAdmin`. The member did not follow the link.
 
 ### Copy left as upstream in this pass
 
@@ -305,14 +307,56 @@ Member gates:
 - Landing privacy copy in `ja.ts`, `ko.ts`, and `zh.ts` still says Multica. English landing copy was a conflict and is Forge.
 - Some non-conflict agent prompts and recognizers still say `multica issue`. The binary name is `forge`. A repo-wide rewrite was not started. Workdir `.multica` stays.
 
-### Still open
+### Still open after the 2026-11-10 pass
 
-The local merge is on `sync/upstream-v0.8.1` and is not pushed. It is still **NO-GO** for `main` and `plan/forge-asymbl-fork`.
+These bullets describe the tree before the 2026-11-19 fix. The current list is [Still open after the fix pass](#still-open-after-the-fix-pass).
 
-- Member UI still offers Create workspace and Connect a machine. The three agent-create POSTs return 403.
+The local merge was on `sync/upstream-v0.8.1` and, on that day, was not pushed. It was already **NO-GO** for `main` and `plan/forge-asymbl-fork`.
+
+- Member UI still offered Create workspace and Connect a machine. The three agent-create POSTs returned 403.
 - Leftover Multica command strings and the three non-English landing privacy blocks.
-- `make sqlc`, `pnpm typecheck`, and the full Go suite.
+- `make sqlc`, `pnpm typecheck`, and the full Go suite had not been run.
 - Dockerfile builder remains `golang:1.27.3-alpine` while `go.mod` is 1.26.9.
 - No production-snapshot migrate. pg_bigm index 446 did not build on this image.
 - Doppler `prd` image variables are unknown.
 - Protocol of installed `v0.3.7-forge` daemons against this server was not tested. No CLI release was cut. `MULTICA_DAEMON_AUTO_UPDATE` stays unset. Desktop DMG remains a local `node scripts/package.mjs --mac --arm64` build.
+
+## Fix pass 2026-11-19
+
+`pnpm typecheck` on the post-merge tree failed in `@multica/views`. Upstream v0.8.1 had removed types, locale keys, and sibling modules that the kept Forge files still imported. `runtime-detail-page.tsx` called `navigation.push` on the DOM `Navigation` global. `create-agent-dialog.tsx` imported `AgentTemplate`, which core no longer exports.
+
+The live gates were moved, then the dead files were deleted:
+
+- Create workspace: `packages/views/layout/rail-workspaces.tsx` hides the link unless the current member role is `owner` or `admin`. While the member list is loading, the link stays hidden. `app-sidebar.tsx` and its test were deleted.
+- Connect a machine: `packages/views/agents/create/runtime-choice-list.tsx` renders that button only when `canManage` is true. `choose-runtime-page.tsx` already sets `canManage` from owner or admin.
+- Co-author trailer text: `packages/views/settings/components/code-tab.tsx` shows `Co-authored-by: forge-agent <github@asymbl.com>`. `github-tab.tsx` was deleted.
+- `runtime-detail-page.tsx` calls `useNavigation()` from `packages/views/navigation`.
+- `create-agent-dialog.tsx` takes `templateSeed` as name, description, and instructions.
+- Also deleted, because nothing live imported them and their dependencies are gone: `agent-creation-studio.tsx`, `onboarding/steps/step-agent.tsx`, `editor/attachment-block.tsx` and its test, and `settings/components/integrations-tab.tsx` and its test. The agent settings tab at `packages/views/agents/components/tabs/integrations-tab.tsx` stayed.
+
+`scripts/verify-patches.sh` checks 2.6, 2.9, 2.10, and 7.2b now grep the live files. Check 2.11 greps the Connect a machine `canManage` guard. `docs/fork-patches.md` sections 2.6 and 2.9 and the CLAUDE.md RBAC cell point at the same files. The creating-agents source map no longer cites `step-agent.tsx`.
+
+### Commands on 2026-11-19
+
+| Command | Result |
+| --- | --- |
+| `pnpm typecheck` | exit 0. Turbo 2.9.5, 9 of 9 tasks, filter `!@multica/mobile`. |
+| `pnpm --filter @multica/views exec vitest run layout/rail-workspaces.test.tsx agents/create/runtime-choice-list.test.tsx` | exit 0. 2 files, 20 tests. |
+| `bash scripts/verify-patches.sh` | 99 passed, 0 failed. |
+
+The member and owner browser pass was not repeated. Staging on ports 18884 and 13804 was down. The 2026-11-10 observations above describe the tree before this gate move.
+
+Merge commits `1d7554dec` and `41fda1aed` are on `origin/sync/upstream-v0.8.1` as draft PR #5 (https://github.com/shivasymbl/forge/pull/5). This fix pass is a later commit on that same branch. Do not merge the PR. `origin/main` is still `48f737e512fa`.
+
+### Still open after the fix pass
+
+Verdict remains **NO-GO** for `main` and `plan/forge-asymbl-fork`. Merging draft PR #5 deploys the droplet.
+
+- Browser re-check that a member does not see Create workspace or Connect a machine, and that an owner does. The two view tests cover those controls. Staging was not restarted for this pass.
+- Leftover Multica command strings and the three non-English landing privacy blocks.
+- `make sqlc` and the full Go suite. `go build ./...` and `go test ./internal/cli` from 2026-11-10 were not re-run.
+- Depot runner labels in `.depot/workflows/ci.yml` and `deploy.yml` still say `depot-ubuntu-24.04-4`.
+- Dockerfile builder remains `golang:1.27.3-alpine` while `go.mod` is 1.26.9.
+- No production-snapshot migrate. pg_bigm index 446 did not build on this image.
+- Doppler `prd` image variables were not read.
+- Protocol of installed `v0.3.7-forge` daemons against this server was not tested. No CLI release was cut.

@@ -80,8 +80,8 @@ check "2.4 daemon.go: PAT path uses requireWorkspaceRole" \
 check "2.5 permissions/rules.ts: canCreateAgent defined" \
   "grep -q 'canCreateAgent' packages/core/permissions/rules.ts"
 
-check "2.6 agents-page: isAdmin prop threaded to PageHeaderBar" \
-  "grep -q 'isAdmin={isWorkspaceAdmin}' packages/views/agents/components/agents-page.tsx"
+check "2.6 agents-page: isWorkspaceAdmin computed for owner/admin management" \
+  "grep -q 'isWorkspaceAdmin' packages/views/agents/components/agents-page.tsx"
 
 check "2.7 runtimes-page: non-admin redirect" \
   "grep -q 'navigation.push' packages/views/runtimes/components/runtimes-page.tsx"
@@ -89,11 +89,14 @@ check "2.7 runtimes-page: non-admin redirect" \
 check "2.8 runtime-detail-page: non-admin redirect" \
   "grep -q 'navigation.push' packages/views/runtimes/components/runtime-detail-page.tsx"
 
-check "2.9 app-sidebar: Create workspace gated by isWorkspaceAdmin" \
-  "grep -q 'isWorkspaceAdmin' packages/views/layout/app-sidebar.tsx"
+check "2.9 rail-workspaces: Create workspace gated by isWorkspaceAdmin" \
+  "grep -q 'isWorkspaceAdmin' packages/views/layout/rail-workspaces.tsx"
 
-check "2.10 agents-page: Browse Templates button present and gated (isAdmin)" \
-  "grep -q 'showTemplateBrowser\|TemplateBrowserModal' packages/views/agents/components/agents-page.tsx"
+check "2.10 choose-runtime: canManage is owner or admin" \
+  "grep -q 'const canManage = member?.role === \"owner\" || member?.role === \"admin\"' packages/views/agents/create/choose-runtime-page.tsx"
+
+check "2.11 runtime choice: Connect a machine is admin-only" \
+  "grep -B 8 'runtime_step.add_remote' packages/views/agents/create/runtime-choice-list.tsx | grep -q 'canManage ?'"
 
 echo ""
 
@@ -166,8 +169,8 @@ check "7.1 co-authored-by hook: forge-agent identity" \
 check "7.2 co-authored-by hook: no multica-agent in hook script" \
   "! grep -q 'multica-agent <github@multica.ai>' server/internal/daemon/repocache/cache.go"
 
-check "7.2b github-tab UI shows forge-agent not multica-agent" \
-  "grep -q 'forge-agent <github@asymbl.com>' packages/views/settings/components/github-tab.tsx"
+check "7.2b code-tab UI shows forge-agent not multica-agent" \
+  "grep -q 'forge-agent <github@asymbl.com>' packages/views/settings/components/code-tab.tsx"
 
 check "7.3 desktop app.setName is Forge" \
   "grep -q 'app.setName(\"Forge\")' apps/desktop/src/main/index.ts"
@@ -201,7 +204,7 @@ check "7.12 daemon auth error uses forge login not multica login" \
   "grep -q 'forge login' server/internal/daemon/daemon.go"
 
 check "7.13 AGENTS.md runtime header is Forge Agent Runtime" \
-  "grep -q 'Forge Agent Runtime' server/internal/daemon/execenv/runtime_config.go"
+  "grep -q 'Forge Agent Runtime' server/internal/daemon/execenv/runtime_config_sections.go"
 
 check "7.14 prompt.go workspace is Forge not Multica" \
   "grep -q 'Forge workspace' server/internal/daemon/prompt.go"
@@ -211,11 +214,11 @@ echo ""
 # ── 8. Slack Integration ──────────────────────────────────────────────────────
 echo "[ 8 ] Slack Integration"
 
-check "8.1 Slack migration 089 exists" \
-  "ls server/migrations/089_workspace_slack_integrations.up.sql > /dev/null 2>&1"
+check "8.1 Slack migration 202 exists" \
+  "ls server/migrations/202_workspace_slack_integrations.up.sql > /dev/null 2>&1"
 
-check "8.2 Slack migration 090 FK fix exists (created_by → user not member)" \
-  "ls server/migrations/090_slack_created_by_fk_fix.up.sql > /dev/null 2>&1"
+check "8.2 Slack migration 203 FK fix exists (created_by → user not member)" \
+  "ls server/migrations/203_slack_created_by_fk_fix.up.sql > /dev/null 2>&1"
 
 check "8.3 Slack integration package exists" \
   "test -f server/internal/integrations/slack/notify.go"
@@ -242,11 +245,11 @@ check "8.9 Slack useTestSlackIntegration invalidates query on success" \
 check "8.10 Slack history returned in GET response (soft-delete audit trail)" \
   "grep -q 'ListSlackIntegrationHistoryForWorkspace\|history' server/internal/handler/slack_integration.go"
 
-check "8.11 Slack migration 089 contains workspace_slack_integrations DDL" \
-  "grep -q 'CREATE TABLE.*workspace_slack_integrations' server/migrations/089_workspace_slack_integrations.up.sql"
+check "8.11 Slack migration 202 contains workspace_slack_integrations DDL" \
+  "grep -q 'CREATE TABLE.*workspace_slack_integrations' server/migrations/202_workspace_slack_integrations.up.sql"
 
-check "8.12 Slack migration 090 references correct FK target (user table)" \
-  "grep -q 'REFERENCES \"user\"' server/migrations/090_slack_created_by_fk_fix.up.sql"
+check "8.12 Slack migration 203 references correct FK target (user table)" \
+  "grep -q 'REFERENCES \"user\"' server/migrations/203_slack_created_by_fk_fix.up.sql"
 
 echo ""
 
@@ -353,6 +356,54 @@ check "13.6 install.sh downloads from shivasymbl/forge not multica-ai" \
 check "13.5 runtimes locale step1_label says Forge CLI not Multica CLI" \
   "grep -q 'Forge CLI\|forge CLI' packages/views/locales/en/runtimes.json && \
    ! grep -q 'Multica CLI\|multica CLI' packages/views/locales/en/runtimes.json"
+
+echo ""
+
+# ── 14. v0.8.1 sync guards ────────────────────────────────────────────────────
+echo "[ 14 ] v0.8.1 sync guards"
+
+check "14.1 CLI update fetches shivasymbl/forge releases" \
+  "grep -q 'repos/shivasymbl/forge/releases' server/internal/cli/update.go && \
+   ! grep -q 'repos/multica-ai/multica/releases' server/internal/cli/update.go"
+
+check "14.2 deploy.yml publishes forge-backend and forge-web" \
+  "grep -q 'ghcr.io/shivasymbl/forge-backend' .depot/workflows/deploy.yml && \
+   grep -q 'ghcr.io/shivasymbl/forge-web' .depot/workflows/deploy.yml"
+
+check "14.3 CreateAgentFromTemplate is admin/owner gated" \
+  "grep -q 'RequireWorkspaceRole.*CreateAgentFromTemplate' server/cmd/server/router.go"
+
+check "14.4 CreateMikaAgent is admin/owner gated" \
+  "grep -q 'RequireWorkspaceRole.*CreateMikaAgent' server/cmd/server/router.go"
+
+check "14.5 runtime strip clears LaunchHeader and Metadata" \
+  "grep -q 'LaunchHeader = \"\"' server/internal/handler/runtime.go && \
+   grep -F -q 'Metadata = map[string]any{}' server/internal/handler/runtime.go"
+
+check "14.6 goreleaser project and binary stay forge" \
+  "grep -q 'binary: forge' .goreleaser.yml && \
+   grep -q 'project_name: forge' .goreleaser.yml"
+
+check "14.7 go.mod is 1.26.9" \
+  "grep -q '^go 1.26.9' server/go.mod"
+
+check "14.8 web next is ^16.4.5" \
+  "grep -q '\"next\": \"\\^16.4.5\"' apps/web/package.json"
+
+check "14.9 slack 202/203 coexist with upstream 202/203" \
+  "test -f server/migrations/202_workspace_slack_integrations.up.sql && \
+   test -f server/migrations/203_slack_created_by_fk_fix.up.sql && \
+   test -f server/migrations/202_runtime_profile_add_qwen.up.sql && \
+   test -f server/migrations/203_issue_workspace_assignee_index.up.sql"
+
+check "14.10 selfhost compose defaults to Forge images" \
+  "grep -q 'ghcr.io/shivasymbl/forge-backend' docker-compose.selfhost.yml && \
+   grep -q 'ghcr.io/shivasymbl/forge-web' docker-compose.selfhost.yml && \
+   ! grep -q 'ghcr.io/multica-ai/' docker-compose.selfhost.yml"
+
+check "14.11 selfhost compose from-email defaults to forge@asymbl.app" \
+  "grep -q 'forge@asymbl.app' docker-compose.selfhost.yml && \
+   ! grep -q 'noreply@multica.ai' docker-compose.selfhost.yml"
 
 echo ""
 

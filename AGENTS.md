@@ -1,131 +1,129 @@
-# Repository Guidelines
+# Repository Instructions
 
-This file provides guidance to AI agents when working with code in this repository.
+Multica is a task management platform where people and agents collaborate on issues. These instructions apply to all coding agents working in this repository.
 
-> **Single source of truth:** This file is a concise pointer document.
-> All authoritative architecture, coding rules, and conventions
-> live in **CLAUDE.md** at the project root. Read that file first.
-> Use `Makefile`, `package.json`, and `pnpm-workspace.yaml` as the
-> source of truth for the full command list.
+## Scope and Reading Order
 
-## Quick Reference
+- Before changing `apps/mobile/`, also read [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md), even if your tool does not load nested instructions automatically. Platform-specific sections below apply only to the named platform.
+- For naming, translations, or Chinese UI/docs copy, read [conventions.mdx](apps/docs/content/docs/developers/conventions.mdx) and [conventions.zh.mdx](apps/docs/content/docs/developers/conventions.zh.mdx).
+- Maintain shared rules here and mobile-specific rules in the mobile file. `CLAUDE.md` files only import them. Update instructions in the same change that alters the referenced workflow or boundary; do not add incident timelines, dependency version lists, or duplicate rules.
 
-### Architecture
+## Sharing Rules and Package Boundaries
 
-Go backend + monorepo frontend (pnpm workspaces + Turborepo) with shared packages.
+| Location | Responsibility and constraints |
+| --- | --- |
+| `server/` | Go backend; Chi, sqlc, WebSocket |
+| `packages/core/` | Headless logic, API client, Query hooks, shared Zustand stores. No UI libraries, `react-dom`, `localStorage`, or `process.env`; use `StorageAdapter` for persistence. |
+| `packages/ui/` | UI primitives and shared styles. No business logic or `@multica/core` imports. |
+| `packages/views/` | Shared web/desktop pages and business components. No store definitions, `next/*`, or `react-router-dom`; use `NavigationAdapter`, `useNavigation()`, and `<AppLink>`. |
+| `apps/web/` | Next.js routes/layouts and web-only UI. Framework APIs stay here; shared navigation adapters live in `apps/web/platform/`. |
+| `apps/desktop/` | Electron and desktop-only UI/state. Application navigation goes through `apps/desktop/src/renderer/src/platform/`. |
+| `apps/mobile/` | Independent Expo/React Native client: owns UI, state, hooks, providers, i18n, build, and release. Shares core types and pure utilities, including platform-independent schemas. |
+| `apps/docs/` | Fumadocs documentation site |
 
-- `server/` - Go backend (Chi router, sqlc, gorilla/websocket)
-- `apps/web/` - Next.js frontend (App Router)
-- `apps/desktop/` - Electron desktop app
-- `packages/core/` - Headless business logic (Zustand stores, React Query hooks, API client)
-- `packages/ui/` - Atomic UI components (shadcn/Base UI, zero business logic)
-- `packages/views/` - Shared business pages/components
-- `packages/tsconfig/` - Shared TypeScript config
+- Dependency direction is `views -> core + ui`; core and ui remain independent. Shared packages export raw TypeScript compiled by consuming apps.
+- Extract logic used by both web and desktop into the appropriate shared package. Keep framework/Electron APIs in the app layer; inject platform-specific UI through props/slots.
+- Wire shared features into both web routes and the desktop router or overlay. Reuse existing guards/providers such as `DashboardGuard` in `packages/views/layout/`.
+- Each workspace declares its directly imported external dependencies. Use `catalog:` for shared dependencies; mobile pins Expo/React Native dependencies in its own manifest.
 
-### State Management (critical)
+## Development and Verification
 
-- **React Query** owns all server state (issues, members, agents, inbox, workspace list)
-- **Zustand** owns all client state (current workspace selection, view filters, drafts, modals)
-- All Zustand stores live in `packages/core/` - never in `packages/views/` or app directories
-- WS events invalidate React Query - never write directly to stores
+Use `Makefile`, workspace `package.json` files, and `pnpm-workspace.yaml` for current commands and versions. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and worktree operations.
 
-### Package Boundaries (hard rules)
+- Use the checkout's managed environment: `make up`, `make status`, `make down`. `make down` preserves data; `make destroy` removes the environment and its data.
+- Worktrees share PostgreSQL but have isolated databases/ports. Use the environment scripts and `.env.worktree`; do not copy the main checkout's `.env` or manually create a database through an assumed PostgreSQL instance.
+- Regenerate sqlc with `make sqlc` after SQL changes.
+- Run the narrowest useful checks while iterating, then broaden when risk warrants it. Report what actually ran and any skipped checks.
 
-- `packages/core/` - zero react-dom, zero localStorage, zero process.env
-- `packages/ui/` - zero `@multica/core` imports
-- `packages/views/` - zero `next/*`, zero `react-router-dom`, use `NavigationAdapter` for routing
-- `apps/web/platform/` - only place for Next.js APIs
+Run these from the repository root:
 
-### Commands
+| Scope | Checks |
+| --- | --- |
+| Frontend excluding mobile | `pnpm typecheck`, `pnpm lint`, `pnpm test` |
+| Go backend | `make test` |
+| End-to-end | `pnpm exec playwright test` |
+| Combined web/backend verification | `make check` |
+| Mobile | Commands in [apps/mobile/AGENTS.md](apps/mobile/AGENTS.md#verification) |
 
-```bash
-make dev              # Auto-setup + start everything
-pnpm typecheck        # TypeScript check
-pnpm test             # TS unit tests (Vitest)
-make test             # Go tests
-make check            # Full verification pipeline
-```
+Docs-only changes can use link/reference checks and `git diff --check`; state that code tests were not run.
 
-<<<<<<< HEAD
-See CLAUDE.md for the complete command reference.
+## State Rules
 
+- TanStack Query owns API/server data. Zustand owns client state such as filters, drafts, modals, and tab layout; persist only durable preferences/drafts/layout, not server data or ephemeral UI state.
+- Web/desktop shared stores live in `packages/core/`. Desktop platform stores remain in desktop; mobile stores remain in mobile. Do not define stores in `packages/views/`.
+- On web/desktop, workspace identity is route-driven; platform mirrors exist only for request headers, storage namespaces, and reconnects. React Context is for platform plumbing, not a second server-state store.
+- Among stores, only auth/workspace stores may call `api.*` directly; other server interactions belong in queries/mutations.
+- Workspace-scoped query keys include `wsId`; account-level keys remain account-scoped. Hooks needing workspace context accept `wsId` unless guaranteed to run under its provider.
+- Zustand selectors return stable references; use shallow comparison for allocated objects/arrays.
+- WebSocket events patch or invalidate Query caches, not server payloads in Zustand. Clearing client-owned pointers is allowed with one responder and a self-initiated guard when this client can cause the event.
+- Optimistic field patches require a predictable result, rare failure, trivial rollback, and staying on the current screen. Snapshot before patching, roll back on failure, and invalidate uncertain projections on settle.
+- Create/delete/leave and confirmation flows await the server before navigation or cleanup; do not optimistically delete entities. Exceptions: workspace leave (known debt under Desktop Rules) and mobile inbox mark-read (mobile instructions).
+- Message sends use visible pending state and retry on failure.
 
-<claude-mem-context>
-# Memory Context
+## API Compatibility
 
-# [Multica] recent context, 2026-05-19 5:55pm GMT+5:30
+Installed desktop clients may talk to newer backends. Preserve response compatibility at the API boundary.
 
-Legend: 🎯session 🔴bugfix 🟣feature 🔄refactor ✅change 🔵discovery ⚖️decision 🚨security_alert 🔐security_note
-Format: ID TIME TYPE TITLE
-Fetch details: get_observations([IDs]) | Search: mem-search skill
+- UI-consumed JSON passes through a zod schema and `parseWithFallback`, not an `as T` cast. Web/desktop use `packages/core/api/schema.ts`; mobile uses its own request helpers.
+- Provide defaults for optional fields and fallbacks for unknown server enums. Prefer explicit boolean checks; avoid tying critical affordances to a single backend flag when other contract signals are available.
+- When adding/changing an endpoint, update its schema and malformed-response tests.
 
-Stats: 50 obs (15,210t read) | 2,180,394t work | 99% savings
+## Database and Migration Rules
 
-### May 14, 2026
-S4670 Summarize progress on Slack integration fixes and related database engineering findings. (May 14 at 11:57 AM)
-S4672 Summarize CI results and recent Git operations. (May 14 at 12:14 PM)
-S4693 Create and deploy Finance, Business Analyst, and Project Manager agent templates. (May 14 at 12:31 PM)
-54664 12:53p 🔴 Finance Analyst Agent Template Created
-54670 12:54p 🔴 Business Analyst Agent Template Created
-54685 " 🔵 Finance Plugin SKILL.md Descriptions
-54695 " 🔵 File Structure of Financial Services Plugins
-54704 " 🔵 Claude Plugin Metadata for Finance Agents
-54716 " 🔵 File Structure of Model-Builder Skills and PM Skills Repository
-54723 12:55p 🔵 Financial Model Skills and PM Skills Structure
-54729 " 🔵 Project Management Skills from Phuryn Repository
-54736 " 🔵 Key Project Management Skill Descriptions
-54677 12:56p 🔵 Contents of Anthropic Financial Services Plugins Directory
-S4701 Summarize progress on Asymbl agent template development and CI status. (May 14 at 1:03 PM)
-S4703 Summarize progress on Asymbl agent template development, CI status, and skill repository access. (May 14 at 1:35 PM)
-S4705 Summarize progress on Asymbl agent template development, CI status, and private skill access verification. (May 14 at 1:37 PM)
-S4713 Summarize Anthropic finance plugin inventory and recommend Asymbl templates (May 14 at 1:38 PM)
-S4716 Summarize progress on Finance team's skills and plan for automation. (May 14 at 1:43 PM)
-S4736 Summarize progress on infrastructure issues and template creation. (May 14 at 1:48 PM)
-S4761 Summarize progress on CI checks and code state after recent commits. (May 14 at 5:38 PM)
-### May 19, 2026
-102886 2:04p 🔵 Current Git Status and Remotes Identified
-102877 " ⚖️ Adopted Git Merge for Upstream Sync Over Cherry-Picking
-102878 " ⚖️ Local Testing of Migrations Before Production Deployment
-102879 " 🔵 Migration Version Key Mismatch Identified
-102880 " ✅ Conflict Resolution Strategy for Key Files
-102881 " 🟣 Addition of "Browse Templates" Button for Agents
-102882 " ✅ Update to `verify-patches.sh` for Template Count
-102883 " ✅ Documentation Update for Merge Policy
-102884 " ✅ Enhanced Migration SQL Content Verification
-102885 " 🔴 Resolved Migration Key Collision Issue
-102887 2:05p 🔵 Migration Runner Logic Examined
-102889 " 🔵 Patch Verification Script Examined
-102890 " 🔵 CLAUDE.md Documentation Reviewed
-102892 " 🔵 Patch Verification Script - Test Infrastructure and Summary
-102894 " 🔵 CLAUDE.md - Forge Fork Rules
-102895 " 🔵 Migrations Directory Resolution and File Handling
-102888 2:06p 🔵 Docker Entrypoint Script Analyzed
-103042 2:14p 🔵 Migration runner lacks transactional atomicity
-103043 " 🔵 Slack API client code is a potential merge conflict risk
-103044 " 🔵 Slack RBAC check in verify-patches.sh is structurally weak
-103061 " 🔵 packages/core/package.json does not directly indicate Slack conflict risk
-103107 " 🔵 Slack API methods added to client.ts in upstream changes
-103115 " 🔵 packages/core/package.json updated to include Slack integration exports
-103124 " 🔵 Upstream migrations do not consistently use IF NOT EXISTS
-103055 " 🔵 Migration runner executes SQL and schema_migrations insert in separate statements
-103166 2:15p 🔵 Upstream migration 089_squad_no_action_activity_index.up.sql uses IF NOT EXISTS
-103187 " 🔵 Upstream migration 090_task_is_leader.up.sql does not use IF NOT EXISTS
-103205 " 🔵 Upstream migration 091_autopilot_webhook_triggers.up.sql uses IF NOT EXISTS
-103223 " 🔵 Upstream migration 091_issue_start_date.up.sql does not use IF NOT EXISTS
-103242 " 🔵 Upstream migration 091_pr_ci_conflict.up.sql does not use IF NOT EXISTS for ALTER TABLE
-103258 " 🔵 Upstream migration 092_pr_stats.up.sql does not use IF NOT EXISTS for ALTER TABLE
-103060 " 🔵 packages/core/api/client.ts contains Slack API methods
-103266 " 🔵 Upstream migration 093_webhook_deliveries.up.sql uses IF NOT EXISTS for CREATE TABLE
-103267 " 🔵 Upstream migration 093_webhook_deliveries.up.sql uses IF NOT EXISTS for CREATE INDEX
-103268 " 🔵 Upstream migration 093_webhook_deliveries.up.sql uses IF NOT EXISTS for ALTER TABLE
-103276 " 🔵 Upstream migration 094_onboarding_questionnaire_v2.up.sql contains UPDATE statement
-103070 " 🔵 Slack API routes in router.go are not consistently wrapped in RBAC middleware
-103082 " 🔵 verify-patches.sh check 8.7 confirms Slack routes have RBAC gate
-103100 2:16p 🔵 Upstream changes detected in packages/core/api/client.ts and packages/core/package.json
-103143 2:17p 🔵 Upstream migration 089_squad_no_action_activity_index.up.sql uses IF NOT EXISTS
+- Do not add foreign keys, cascading deletes, or cascading updates. Validate relationships and clean up dependents in application code, using a transaction when the operation must be atomic.
+- Every migration-created index, including indexes on new tables, uses `CREATE [UNIQUE] INDEX CONCURRENTLY`. Each concurrent index build gets its own single-statement migration file; the runner executes files outside an explicit transaction.
+- Conditionally skipped migrations are still recorded in `schema_migrations`. Later DDL touching conditional objects must be idempotent (`IF EXISTS` / `IF NOT EXISTS`); document recovery if the missing object would break runtime behavior.
 
-Access 2180k tokens of past work via get_observations([IDs]) or mem-search skill.
-</claude-mem-context>
-=======
-See CLAUDE.md for the authoritative rules and common commands.
->>>>>>> v0.3.31
+## Backend UUID Rules
+
+In `server/internal/handler/`, distinguish UUID sources before using them in writes:
+
+- UUID-or-human-readable resource params: resolve with loaders such as `loadIssueForUser`, `loadSkillForUser`, `loadAgentForUser`, or `requireDaemonRuntimeAccess`, then write using the resolved `entity.ID`.
+- Pure UUID request input: `parseUUIDOrBadRequest(w, s, fieldName)`; return immediately when `ok=false`.
+- Trusted sqlc/test-fixture round-trips: `parseUUID(s)`, which panics on invalid input.
+- Outside handlers: `util.ParseUUID(s)` and check the error.
+
+Workspace-scoped queries filter by `workspace_id`; membership gates access and `X-Workspace-ID` selects the workspace. Assignees are polymorphic: interpret `assignee_id` together with `assignee_type`.
+
+## Desktop Rules
+
+- Workspace session routes are tab destinations. Pre-workspace one-shot flows (create workspace, accept invite) use `WindowOverlay` in `apps/desktop/src/renderer/src/stores/window-overlay-store.ts`, not new routes. Stale workspace tabs heal by dropping stale tab groups.
+- Workspace route layouts own `setCurrentWorkspace(slug, uuid)` from `@multica/core/platform`; leaving workspace context calls `setCurrentWorkspace(null, null)`.
+- Cross-workspace navigation uses the adapter's `switchWorkspace(slug, targetPath)` flow; do not bypass it with direct router navigation.
+- Workspace leave clears/navigates first to avoid the `member:removed` race; this is known debt in `packages/views/settings/components/workspace-tab.tsx`, not a pattern for new flows.
+- Full-window views outside the dashboard shell mount `<DragStrip />` from `@multica/views/platform` as the first flex child. Interactive controls in the top 48px need `WebkitAppRegion: "no-drag"`.
+
+## UI Copy
+
+- Descriptions are optional and omitted by default. Do not restate titles, labels, values, statuses, or button actions; add help only for a non-obvious choice, constraint, consequence, or next step. A description prop is not a requirement to write a paragraph.
+- Before adding or reviewing copy, follow "UI descriptions" in [conventions.mdx](apps/docs/content/docs/developers/conventions.mdx), and review all supported translations, including mobile's independent copy.
+
+## Web/Desktop UI Rules
+
+- For Button and Dialog usage, read `packages/ui/docs/button.md` and `packages/ui/docs/dialog.md`.
+- Prefer existing shadcn/Base UI primitives. Add components with `pnpm ui:add <component>`.
+- For `pnpm ui:add @reui/<name>`, decline overwrite prompts. Keep `REUI_LICENSE_KEY` in the environment, never in repo files. Adapt vendored primitives into `packages/ui/components/ui/` and compositions into `packages/views/`.
+- Import icons from `@multica/ui/icons`; no icon library is installed. If the icon you need is missing, draw it by following `.agents/skills/multica-icons/SKILL.md`. Do not substitute an inline SVG or an emoji. Rewrite icon imports in `ui:add` output before committing.
+- Use shared semantic tokens in `packages/ui/styles/`. Typography uses the role-named `--text-*` scale in `packages/ui/styles/tokens.css`, not Tailwind's default size ramp.
+- Selected states remain identifiable on hover. Handle overflow, long text, and scrolling deliberately; avoid unnecessary local state and dividers.
+
+## Testing
+
+- Tests live beside their implementation: shared logic in core, shared components in views, platform wiring in apps, E2E in `e2e/`, Go tests in server. Do not test shared behavior in app suites.
+- Give each behavior one canonical test layer: helper tests own parsing/state matrices; component tests cover wiring, accessibility, happy paths, and named regressions. Prefer a failing regression test before behavioral fixes.
+- DOM-free `.test.ts` files start with `// @vitest-environment node`; do not use it if it would silently switch the code under test to an SSR path.
+- Every workspace with jsdom suites loads `@multica/vitest-setup/web-storage` in its Vitest setup; do not add per-package `localStorage` shims.
+- Views tests must not mock `next/*` or `react-router-dom`. Mock stores with their Zustand callable shape plus `getState`; mock API calls at `@multica/core/api`.
+- E2E setup/teardown uses `TestApiClient`.
+- DB-backed Go tests use `server/internal/testutil` fixtures (`dbfx.Issue`, `dbfx.Task`, `dbfx.Insert`) and `testutil.Call(h, req).Want(status).JSON(&out)`. Keep product assertions and case-specific diagnostics in the test, not fixture helpers.
+- Default tests must not resolve or execute user-installed agent CLIs; pass test-created fake or missing executable paths. New default agent commands go in `scripts/agent-cli-command-names.txt`.
+- Only run real-agent smoke tests when explicitly authorized. Gate them behind `agentintegration` and check `MULTICA_RUN_REAL_AGENT_SMOKE=1` before executable lookup/account access. Run the specific test: `(cd server && MULTICA_RUN_REAL_AGENT_SMOKE=1 go test -tags=agentintegration ./pkg/agent -run '<test-name>' -count=1 -v)`.
+
+## Change and Delivery Rules
+
+- Keep changes scoped; reuse existing patterns.
+- Before adding complexity for a speculative or vanishingly unlikely race or security edge case, explain the concrete failure mode, likelihood, and complexity cost to the user and get their buy-in. Do not silently expand scope for theoretical robustness.
+- Do not add internal compatibility shims, dual writes, fallback paths, or legacy adapters unless requested. This does not relax API response compatibility above.
+- Use names, types, and tests to express behavior. Code comments are English and kept for non-obvious rationale and constraints; remove superseded plans and incident narratives when updating code. Preserve tool directives and mixed-version contracts.
+- New global pre-workspace routes use a single word or `/{noun}/{verb}`, not hyphenated root names. Update `server/internal/handler/reserved_slugs.json`, run `pnpm generate:reserved-slugs`, and commit `packages/core/paths/reserved-slugs.ts` when changing reserved slugs.
+- Use atomic conventional commits and the repository PR template. For releases, follow [.github/RELEASING.md](.github/RELEASING.md); default to a patch bump unless specified otherwise.

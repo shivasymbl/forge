@@ -207,10 +207,40 @@ describe("LarkAgentBindButton (CTA gate)", () => {
     expect(screen.queryByRole("button", { name: /Bind to Lark/i })).toBeNull();
   });
 
-  it("hides both bind CTAs for a non-admin agent owner (matches backend admin gate)", () => {
+  it("hides both bind CTAs for a plain member when no agentOwnerId is supplied (stays admin-only)", () => {
     membersRef.current = [{ user_id: "user-1", role: "member" }];
     const { container } = render(
       <LarkAgentBindButton agentId="agent-1" agentName="Bot" />,
+      { wrapper: I18nWrapper },
+    );
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("shows the Feishu bind CTA for a non-admin agent owner (agentOwnerId matches the user, MUL-4213)", () => {
+    // The backend authorizes the agent's owner via canManageAgent even when
+    // they are only a plain workspace member, so the CTA must render for
+    // them once the caller threads the agent's owner_id.
+    membersRef.current = [{ user_id: "user-1", role: "member" }];
+    render(
+      <LarkAgentBindButton
+        agentId="agent-1"
+        agentName="Bot"
+        agentOwnerId="user-1"
+      />,
+      { wrapper: I18nWrapper },
+    );
+    expect(screen.getByRole("button", { name: /Bind to Feishu/i })).toBeTruthy();
+  });
+
+  it("still hides the CTAs for a non-admin member who is NOT the agent owner", () => {
+    // agentOwnerId belongs to someone else, so a plain member gets nothing.
+    membersRef.current = [{ user_id: "user-1", role: "member" }];
+    const { container } = render(
+      <LarkAgentBindButton
+        agentId="agent-1"
+        agentName="Bot"
+        agentOwnerId="user-2"
+      />,
       { wrapper: I18nWrapper },
     );
     expect(container.querySelector("button")).toBeNull();
@@ -295,6 +325,7 @@ describe("LarkAgentBindButton (CTA gate)", () => {
     // Disconnect action appears; the region-aware Manage link still points
     // at the mainland host.
     expect(screen.getByText("Feishu")).toBeTruthy();
+    expect(screen.getByText("Bound — awaiting message verification")).toBeTruthy();
     expect(screen.getByTestId("lark-agent-bot-disconnect")).toBeTruthy();
     const link = screen.getByRole("link", { name: /Manage in Feishu/i }) as HTMLAnchorElement;
     expect(link.href).toBe("https://open.feishu.cn/app/cli_existing_app");
@@ -327,7 +358,7 @@ describe("LarkAgentBindButton (CTA gate)", () => {
     render(<LarkAgentBindButton agentId="agent-1" agentName="Bot" />, {
       wrapper: I18nWrapper,
     });
-    expect(screen.getByText(/Connected to Lark/i)).toBeTruthy();
+    expect(screen.getByText("Bound — awaiting message verification")).toBeTruthy();
     const link = screen.getByRole("link", { name: /Manage in Lark/i }) as HTMLAnchorElement;
     expect(link.href).toBe("https://open.larksuite.com/app/cli_lark_app");
   });
@@ -452,6 +483,20 @@ describe("LarkAgentBotConnectedBadge (Unbind / Disconnect)", () => {
     expect(screen.getByTestId("lark-agent-bot-disconnect")).toBeTruthy();
     // Fixture omits region → Feishu copy.
     expect(screen.getByRole("link", { name: /Manage in Feishu/i })).toBeTruthy();
+  });
+
+  it("points a silent bot at the event-delivery check (#8496)", () => {
+    render(<LarkAgentBindButton agentId="agent-1" agentName="Bot" />, {
+      wrapper: I18nWrapper,
+    });
+    // A bound app whose events go to a request URL renders this exact
+    // badge and receives nothing, so the connected state has to name the
+    // one setting that explains the silence.
+    expect(screen.getByText(/long connection/i)).toBeTruthy();
+    const docs = screen.getByRole("link", { name: /Troubleshooting/i });
+    expect(docs.getAttribute("href")).toBe(
+      "https://multica.ai/docs/lark-bot-integration",
+    );
   });
 
   it("opens the confirm dialog and does NOT call the API until the user confirms", async () => {
@@ -744,5 +789,21 @@ describe("LarkTab connected bots list (agent identity rendering)", () => {
     expect(screen.getByText(/Unknown Agent/)).toBeTruthy();
     // Disconnect stays reachable so the orphan row can be cleaned up.
     expect(screen.getByRole("button", { name: /Disconnect/i })).toBeTruthy();
+  });
+});
+
+
+describe("Lark inbound verification display", () => {
+  it("updates the bound status when refreshed evidence arrives", () => {
+    const installation = { id: "proof", workspace_id: "workspace-1", agent_id: "agent-1", app_id: "app", bot_open_id: "bot", installer_user_id: "user-1", status: "active", installed_at: "2026-10-29T00:00:00Z", created_at: "2026-10-29T00:00:00Z", updated_at: "2026-10-29T00:00:00Z", first_message_received_at: null as string | null };
+    installationsRef.current.installations = [installation];
+    const { rerender } = render(<LarkAgentBindButton agentId="agent-1" agentName="Bot" />, { wrapper: I18nWrapper });
+    expect(screen.getByText("Bound — awaiting message verification")).toBeTruthy();
+    expect(screen.getByText(/Existing bindings may have no recorded verification yet/)).toBeTruthy();
+    installation.first_message_received_at = "2026-10-29T01:00:00Z";
+    rerender(<LarkAgentBindButton agentId="agent-1" agentName="Bot" />);
+    expect(screen.getByText("Message reception verified")).toBeTruthy();
+    expect(screen.getByText(/does not confirm ongoing connectivity/)).toBeTruthy();
+    expect(screen.queryByText("Bound — awaiting message verification")).toBeNull();
   });
 });

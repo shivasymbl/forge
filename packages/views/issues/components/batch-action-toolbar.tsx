@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "@multica/ui/icons";
 import { toast } from "sonner";
 import { Button } from "@multica/ui/components/ui/button";
 import {
@@ -14,24 +14,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@multica/ui/components/ui/alert-dialog";
+import { useQuery } from "@tanstack/react-query";
+import { useIssueDeletion } from "@multica/core/issues/use-issue-deletion";
 import type { Issue, UpdateIssueRequest } from "@multica/core/types";
-import { useIssueSelectionStore } from "@multica/core/issues/stores/selection-store";
+import { useWorkspaceId } from "@multica/core/hooks";
 import { commonIssueFields } from "@multica/core/issues/batch";
+import { sharedWorkflowStatusKeys, useIssueWorkflows } from "@multica/core/issue-workflows";
+import { projectListOptions } from "@multica/core/projects/queries";
 import { useBatchUpdateIssues, useBatchDeleteIssues } from "@multica/core/issues/mutations";
 import { useModalStore } from "@multica/core/modals";
 import { StatusPicker, PriorityPicker, AssigneePicker } from "./pickers";
 import { useT } from "../../i18n";
-import { cn } from "@multica/ui/lib/utils";
+import { CollectionBatchBar } from "../../layout/collection-list";
+import { useIssueSurfaceActionsOptional } from "../surface/actions-context";
+import { useIssueSurfaceSelection } from "../surface/selection-context";
+import { useRegisterCommandBarContext } from "../../search/register-context";
 
 export function BatchActionToolbar({
   issues,
   placement = "fixed-bottom",
+  clearSelectionOnApply = false,
 }: {
   /**
    * The universe of selectable issues at this call site (the same list the
-   * rows are rendered from). The toolbar filters it by the global selection to
-   * reflect the real common status / priority / assignee of the selected
-   * issues, mirroring how the skill list filters its rows by `selectedIds`.
+   * rows are rendered from). The toolbar filters it by the active surface
+   * selection to reflect the real common status / priority / assignee of the
+   * selected issues, mirroring how the skill list filters rows by `selectedIds`.
    */
   issues: Issue[];
   /**
@@ -41,37 +49,94 @@ export function BatchActionToolbar({
    * the selected rows (used inside scrollable sections like sub-issues).
    */
   placement?: "fixed-bottom" | "inline";
+  /**
+   * Drop the selection once a status / priority / assignee change fully
+   * applies. Off for full-screen lists, where the selection stays so several
+   * edits can be chained; on for sub-issues, where a batch edit is a one-shot
+   * dispatch and a lingering inline toolbar reads as unfinished. A partial or
+   * failed write keeps the selection so the user can retry.
+   */
+  clearSelectionOnApply?: boolean;
 }) {
   const { t } = useT("issues");
-  const selectedIds = useIssueSelectionStore((s) => s.selectedIds);
-  const clear = useIssueSelectionStore((s) => s.clear);
-  const count = selectedIds.size;
+  const selection = useIssueSurfaceSelection();
+  const selectedIds = selection.selectedIds;
+  const clear = selection.clear;
+
+  // The authoritative selection is selectedIds ∩ the visible universe. Acting
+  // on raw selectedIds while other consumers (Export selected, common fields)
+  // intersect lets one "N selected" mean different sets — e.g. a realtime
+  // update drops a selected row from the window, batch still mutates it but
+  // export omits it. Count, pickers, and every action below share this set.
+  const selectedIssues = useMemo(
+    () => issues.filter((i) => selectedIds.has(i.id)),
+    [issues, selectedIds],
+  );
+  const count = selectedIssues.length;
+
+  useRegisterCommandBarContext(
+    useMemo(
+      () => (count > 0 ? { kind: "issues", issues: selectedIssues, clearSelection: clear } : null),
+      [count, selectedIssues, clear],
+    ),
+  );
 
   // Reflect the real shared value of the selected issues in each picker; fall
   // back to an empty (no-checkmark) state when the selection is mixed, instead
   // of asserting a hardcoded default.
   const common = useMemo(
-    () => commonIssueFields(issues.filter((i) => selectedIds.has(i.id))),
-    [issues, selectedIds],
+    () => commonIssueFields(selectedIssues),
+    [selectedIssues],
+  );
+
+  // A selection inside one project offers that project's workflow statuses;
+  // one spanning projects offers the statuses every selected issue's
+  // workflow allows. (MUL-7420)
+  const sharedProjectId = useMemo(() => {
+    const first = selectedIssues[0]?.project_id ?? null;
+    return first && selectedIssues.every((i) => i.project_id === first) ? first : null;
+  }, [selectedIssues]);
+  const wsId = useWorkspaceId();
+  const { canDelete } = useIssueDeletion(wsId);
+  const canDeleteSelection = selectedIssues.every(canDelete);
+  const { workflows } = useIssueWorkflows(wsId);
+  const { data: projects } = useQuery({ ...projectListOptions(wsId), enabled: count > 0 && !sharedProjectId });
+  const allowedStatuses = useMemo(
+    () => (sharedProjectId ? null : sharedWorkflowStatusKeys(workflows, projects, selectedIssues)),
+    [sharedProjectId, workflows, projects, selectedIssues],
   );
 
   const [statusOpen, setStatusOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
   const [assigneeOpen, setAssigneeOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const surfaceActions = useIssueSurfaceActionsOptional();
   const batchUpdate = useBatchUpdateIssues();
   const batchDelete = useBatchDeleteIssues();
   const openModal = useModalStore((s) => s.open);
-  const loading = batchUpdate.isPending || batchDelete.isPending;
+  const loading =
+    surfaceActions?.isPending ?? (batchUpdate.isPending || batchDelete.isPending);
+  const ids = selectedIssues.map((issue) => issue.id);
 
-  if (count === 0) return null;
-
-  const ids = Array.from(selectedIds);
+  useEffect(() => {
+    if (count > 0) return;
+    setStatusOpen(false);
+    setPriorityOpen(false);
+    setAssigneeOpen(false);
+    setDeleteOpen(false);
+  }, [count]);
 
   const handleBatchUpdate = async (updates: Partial<UpdateIssueRequest>) => {
     try {
-      await batchUpdate.mutateAsync({ ids, updates });
-      toast.success(t(($) => $.batch.update_success, { count }));
+      const { updated } = surfaceActions
+        ? await surfaceActions.batchUpdate(ids, updates)
+        : await batchUpdate.mutateAsync({ ids, updates });
+      if (updated < count) {
+        toast.warning(t(($) => $.batch.update_partial, { updated, count }));
+      } else {
+        if (clearSelectionOnApply) clear();
+        toast.success(t(($) => $.batch.update_success, { count }));
+      }
     } catch (err) {
       toast.error(
         err instanceof Error && err.message
@@ -81,21 +146,18 @@ export function BatchActionToolbar({
     }
   };
 
-  // Status and agent/squad assignment can fan out runs across the selection, so
-  // route them through the pre-trigger confirm modal (aggregate "将启动 N 个" +
-  // collective handoff note for assign + 暂不开始). The modal applies the batch
-  // itself. Priority, member assign, and unassign never start a run — direct.
+  // Batch status changes apply directly — no run-confirm modal (MUL-4155).
+  // done/cancelled can never start a run, and a backlog → active promotion now
+  // starts its run the same way a single-issue status change or the CLI does,
+  // without an extra confirmation step (product decision on MUL-4155). The
+  // status change was previously routed through the pre-trigger modal, which for
+  // the common done/cancelled case only rendered a misleading "现在开始处理？ →
+  // 不会开始处理" box. Agent/squad assignment still confirms via
+  // handleBatchAssignee — that is the only batch action that should preview a
+  // run fan-out.
   const handleBatchStatus = (updates: Partial<UpdateIssueRequest>) => {
     if (!updates.status) return;
-    // Backlog is the parking lot — a move into backlog never starts a run
-    // (server/internal/service/issue_trigger.go), so the confirm modal would
-    // only render an empty "won't start" box with a single Apply button. Apply
-    // directly, matching the single-issue status path.
-    if (updates.status === "backlog") {
-      void handleBatchUpdate(updates);
-      return;
-    }
-    openModal("issue-run-confirm", { issueIds: ids, mode: "status", status: updates.status });
+    void handleBatchUpdate(updates);
   };
 
   const handleBatchAssignee = (updates: Partial<UpdateIssueRequest>) => {
@@ -104,16 +166,16 @@ export function BatchActionToolbar({
       // issue is in backlog the confirm modal would only render an empty "won't
       // start" box — apply directly, matching handleBatchStatus's backlog short-
       // circuit. A mixed selection still routes through the modal: the non-backlog
-      // issues will trigger and need confirmation. An empty intersection (selected
-      // ids not in `issues`) falls through to the modal — safer than skipping.
-      const selected = issues.filter((i) => selectedIds.has(i.id));
-      const allBacklog = selected.length > 0 && selected.every((i) => i.status === "backlog");
+      // issues will trigger and need confirmation.
+      // Only the fixed Backlog key parks work; custom Unstarted does not.
+      const allBacklog = selectedIssues.every((i) => i.status === "backlog");
       if (!allBacklog) {
         openModal("issue-run-confirm", {
           issueIds: ids,
           mode: "assign",
           assigneeType: updates.assignee_type,
           assigneeId: updates.assignee_id,
+          onApplied: clearSelectionOnApply ? clear : undefined,
         });
         return;
       }
@@ -122,8 +184,13 @@ export function BatchActionToolbar({
   };
 
   const handleBatchDelete = async () => {
+    if (!canDeleteSelection) return;
     try {
-      await batchDelete.mutateAsync(ids);
+      if (surfaceActions) {
+        await surfaceActions.batchDelete(ids);
+      } else {
+        await batchDelete.mutateAsync(ids);
+      }
       clear();
       toast.success(t(($) => $.batch.delete_success, { count }));
     } catch (err) {
@@ -139,28 +206,19 @@ export function BatchActionToolbar({
 
   return (
     <>
-      <div
-        className={cn(
-          "z-50 flex items-center gap-1 rounded-lg border bg-background px-2 py-1.5 shadow-lg",
-          placement === "fixed-bottom"
-            ? "fixed bottom-6 left-1/2 -translate-x-1/2"
-            : "mb-2 w-fit",
-        )}
+      <CollectionBatchBar
+        count={count}
+        onClear={clear}
+        placement={placement === "fixed-bottom" ? "fixed" : "inline"}
+        label={t(($) => $.batch.selected, { count })}
       >
-        <div className="flex items-center gap-1.5 pl-1 pr-2 border-r mr-1">
-          <span className="text-sm font-medium">{t(($) => $.batch.selected, { count })}</span>
-          <button
-            type="button"
-            onClick={clear}
-            className="rounded p-0.5 hover:bg-accent transition-colors"
-          >
-            <X className="size-3.5 text-muted-foreground" />
-          </button>
-        </div>
-
         {/* Status */}
         <StatusPicker
           status={common.status}
+          // No shared project spans projects (or none): not the Default-only
+          // list of a single issue outside a project. (MUL-8121)
+          projectId={sharedProjectId ?? undefined}
+          allowedStatuses={allowedStatuses}
           onUpdate={handleBatchStatus}
           open={statusOpen}
           onOpenChange={setStatusOpen}
@@ -197,16 +255,17 @@ export function BatchActionToolbar({
         <Button
           variant="ghost"
           size="sm"
-          disabled={loading}
+          disabled={loading || !canDeleteSelection}
+          title={!canDeleteSelection ? t(($) => $.batch.delete_restricted) : undefined}
           onClick={() => setDeleteOpen(true)}
           className="text-destructive hover:text-destructive"
         >
           <Trash2 className="size-3.5 mr-1" />
           {t(($) => $.batch.delete)}
         </Button>
-      </div>
+      </CollectionBatchBar>
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      {count > 0 && <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -214,14 +273,12 @@ export function BatchActionToolbar({
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t(($) => $.batch.delete_dialog_desc, { count })}
-              <span className="mt-2 block text-xs text-muted-foreground/80">
-                {t(($) => $.batch.delete_dialog_warning)}
-              </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t(($) => $.batch.cancel)}</AlertDialogCancel>
             <AlertDialogAction
+              disabled={loading || !canDeleteSelection}
               onClick={handleBatchDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
@@ -229,8 +286,7 @@ export function BatchActionToolbar({
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
-      </AlertDialog>
+      </AlertDialog>}
     </>
   );
 }
-

@@ -10,9 +10,9 @@ at the bottom before relying on an exact line.
 
 | Behavior | File:line | Drifted from |
 |---|---|---|
-| CLI command `pull-requests <id>` (alias `prs`) | `server/cmd/forge/cmd_issue.go:105` | `:104` |
-| `runIssuePullRequests` handler | `server/cmd/forge/cmd_issue.go:507` | new citation |
-| Calls `GET /api/issues/<id>/pull-requests` | `server/cmd/forge/cmd_issue.go:522` | `:522` (unchanged) |
+| CLI command `pull-requests <id>` (alias `prs`) | `server/cmd/multica/cmd_issue.go:105` | `:104` |
+| `runIssuePullRequests` handler | `server/cmd/multica/cmd_issue.go:507` | new citation |
+| Calls `GET /api/issues/<id>/pull-requests` | `server/cmd/multica/cmd_issue.go:522` | `:522` (unchanged) |
 | API route registration | `server/cmd/server/router.go:480` | `:480` (unchanged) |
 | Handler `ListPullRequestsForIssue` → `Queries.ListPullRequestsByIssue` | `server/internal/handler/github.go:466,471` | `:466` (unchanged) |
 | Row → response mapper `issuePullRequestRowToResponse` | `server/internal/handler/github.go:149` | new citation |
@@ -72,6 +72,19 @@ Every `PREFIX-NUMBER` mention in **title, body, or branch** resolves to an issue
 in the workspace and writes a link row (`LinkIssueToPullRequest`, ~`github.go:762`).
 This is what `forge issue pull-requests` later reads back.
 
+**Reference-only flag (MUL-3739).** The link row carries a `reference_only`
+boolean (`migrations/127_issue_pull_request_reference_only.up.sql`). The handler
+computes a `qualifyingIdents` set = identifiers in **title or branch** (any
+`extractIdentifiers` match) ∪ **body closing keywords** (`closingIdents`). A
+linked identifier NOT in that set was matched only by a bare body mention, so its
+row is written with `reference_only = true`. Both `ListPullRequestsByIssue` and
+`GetIssuePullRequestCloseAggregate` filter `AND NOT reference_only`, so
+reference-only links are hidden from the CLI / UI PR list **and** excluded from
+the auto-advance gate (an open body-only mention must not silently block the
+issue from reaching `done` while invisible in the list). The row still exists for
+edit-time close-intent tracking. `reference_only` follows the same
+`preserve_close_intent` terminal gate as `close_intent`.
+
 Drifted from the prior skill's `github.go:727` citation, which pointed at the old
 call-site location for the link logic.
 
@@ -93,8 +106,10 @@ deliberately excluded (function doc, `github.go:1044-1050`): a branch like
 
 Drifted from the prior skill's `github.go:736` citation.
 
-Net: a bare title prefix (`MUL-2759: ...`) or a branch ref links only;
-`Closes MUL-2759` links **and** records close intent.
+Net: a bare title prefix (`MUL-2759: ...`) or a branch ref links only (shown in
+the PR list); `Closes MUL-2759` links **and** records close intent; a bare body
+mention with no title/branch ref and no closing keyword links as `reference_only`
+and is hidden from the PR list.
 
 ## Status side effects (enqueue contracts)
 
@@ -105,11 +120,19 @@ Net: a bare title prefix (`MUL-2759: ...`) or a branch ref links only;
 | Backlog → non-backlog (not done/cancelled) enqueues on update | `server/internal/handler/issue.go:2537-2540` | `:2523` |
 | Same contract in batch update | `server/internal/handler/issue.go:3021-3024` | new citation |
 | Child → `done` notifies + wakes the parent, gated by the stage barrier | `server/internal/handler/issue_child_done.go:66` (`notifyParentOfChildDone`; doc comment at `:15`; barrier gate at `:115`) | func def `:51` |
+| Status change (incl. → `cancelled`) does NOT cancel in-flight tasks; only issue deletion does (MUL-4465) | no-cancel note in `server/internal/handler/issue.go:2652-2658` (`UpdateIssue`) and `:3170-3171` (`BatchUpdateIssues`); deletion still cancels at `:2863` (`DeleteIssue`) / `:3239` (`BatchDeleteIssues`) via `CancelTasksForIssue` (`server/internal/service/task.go:1229`) | new citation |
 
 Creation with `--status todo` (or any non-backlog status) on an agent-assigned
 issue fires the agent immediately; `--status backlog` parks it with the assignee
 set but no trigger. Promoting `backlog → todo` later fires it then (update path,
 line 2537).
+
+Moving an issue to `cancelled` used to call `CancelTasksForIssue` and stop every
+active task on it (the old #940 behavior). MUL-4465 removed that from both
+`UpdateIssue` and `BatchUpdateIssues`: a status flip — `cancelled` included —
+never cancels tasks now. `CancelTasksForIssue` fires only from the issue-deletion
+paths (`DeleteIssue` / `BatchDeleteIssues`), where the owning issue row is going
+away, so no task is left orphaned.
 
 ## Sub-issue stages (barrier wake)
 
@@ -118,8 +141,8 @@ line 2537).
 | `issue.stage` column (nullable, `>= 1`) | `server/migrations/123_issue_stage.up.sql` |
 | Stage barrier: notify+wake fire only when the lowest unfinished stage is all-terminal; unstaged set = one implicit stage | `server/internal/handler/issue_child_done.go:231` (`stageBarrierClosed`) |
 | Per-stage summary + next stage for the wake comment | `server/internal/handler/issue_child_done.go:254` (`stageProgressSummary`) |
-| `--stage` on `issue create` / `issue update` | `server/cmd/forge/cmd_issue.go:328,350` |
-| `forge issue children <id>` (sub-issues grouped by stage) | `server/cmd/forge/cmd_issue.go:114,678`; route `GET /api/issues/{id}/children` → `ListChildIssues` |
+| `--stage` on `issue create` / `issue update` | `server/cmd/multica/cmd_issue.go:328,350` |
+| `forge issue children <id>` (sub-issues grouped by stage) | `server/cmd/multica/cmd_issue.go:114,678`; route `GET /api/issues/{id}/children` → `ListChildIssues` |
 
 Advancement is agent-driven: the server only detects the closed barrier and
 wakes the parent assignee. Promoting the next stage's `backlog` sub-issues to
@@ -129,12 +152,23 @@ wakes the parent assignee. Promoting the next stage's `backlog` sub-issues to
 
 | Behavior | File:line |
 |---|---|
-| `forge issue metadata set <issue-id> --key --value [--type]` | `server/cmd/forge/cmd_issue_metadata.go:80,109-111` |
-| `forge issue metadata delete <issue-id> --key` | `server/cmd/forge/cmd_issue_metadata.go:93,113` |
+| `forge issue metadata set <issue-id> --key --value [--type]` | `server/cmd/multica/cmd_issue_metadata.go:80,109-111` |
+| `forge issue metadata delete <issue-id> --key` | `server/cmd/multica/cmd_issue_metadata.go:93,113` |
 | API routes (PUT/DELETE `/metadata/{key}`) | `server/cmd/server/router.go:478-479` |
 
 `--value` is JSON-parsed by default (bool/number sniff); `--type` forces
 `string`/`number`/`bool`.
+
+## Custom properties CLI
+
+| Behavior | File:line |
+|---|---|
+| `forge property list/get/create/update/archive/unarchive` | `server/cmd/multica/cmd_property.go` |
+| `forge issue property list/set/unset` (name→id translation) | `server/cmd/multica/cmd_property.go` (`encodeIssuePropertyValue`) |
+| Definition CRUD, admin gate, agent-actor rejection | `server/internal/handler/property.go` (`requirePropertyAdmin`) |
+| Optional catalog icon field and allowlist validation | `server/internal/handler/property.go` (`PropertyResponse`, `validatePropertyIcon`) |
+| Per-type value validation (self-correcting errors) | `server/internal/handler/property.go` (`validatePropertyValue`) |
+| API routes (`/api/properties`, PUT/DELETE `/api/issues/{id}/properties/{propertyId}`) | `server/cmd/server/router.go` |
 
 ## Verification command
 
@@ -142,10 +176,11 @@ Re-derive any line above before depending on it:
 
 ```bash
 cd server
-grep -n 'pull-requests <id>'                 cmd/forge/cmd_issue.go
+grep -n 'pull-requests <id>'                 cmd/multica/cmd_issue.go
 grep -n 'ListPullRequestsForIssue'           cmd/server/router.go internal/handler/github.go
 grep -n 'func issuePullRequestRowToResponse\|type GitHubPullRequestResponse struct\|func derivePRState\|func extractIdentifiers\|func extractClosingIdentifiers\|closingIdentifierRe' internal/handler/github.go
 grep -n 'extractIdentifiers(\|extractClosingIdentifiers(\|derivePRState(' internal/handler/github.go
+grep -n 'qualifyingIdents\|reference_only\|ReferenceOnly' internal/handler/github.go pkg/db/queries/github.sql
 grep -n 'prevIssue.Status == "backlog"\|func (h \*Handler) shouldEnqueueAgentTask' internal/handler/issue.go
 grep -n 'func notifyParentOfChildDone'       internal/handler/issue_child_done.go
 ```

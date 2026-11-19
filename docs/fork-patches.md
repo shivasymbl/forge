@@ -113,34 +113,33 @@ that should not be visible to workspace members.
 **Change:** Added `canCreateAgent`, `canViewRuntimes`, `canConnectRuntime` — all require `isAdminLike` role.
 **Verify:** `grep -q "canCreateAgent" packages/core/permissions/rules.ts`
 
-### 2.6 Agents page — create button gated, runtimeListOptions ordered (F2)
-**File:** `packages/views/agents/components/agents-page.tsx`
-**Changes:**
-- `memberListOptions` query moved before `runtimeListOptions` (hook order change)
-- `PageHeaderBar` receives `isAdmin` prop — button `disabled={!isAdmin}`
-- `EmptyState` conditionally renders create button: `{isAdmin && <Button>}`
-- All `PageHeaderBar` / `EmptyState` call sites pass `isAdmin={isWorkspaceAdmin}`
-**Verify:** `grep -q "isAdmin={isWorkspaceAdmin}" packages/views/agents/components/agents-page.tsx`
+### 2.6 Agent management and runtime choice — owner/admin only (F2)
+**Files:** `packages/views/agents/components/agents-page.tsx`, `packages/views/agents/create/choose-runtime-page.tsx`, `packages/views/agents/create/runtime-choice-list.tsx`
+**Changes (v0.8.1 removed the creation studio; the live pages own the gate):**
+- `agents-page.tsx` derives `isWorkspaceAdmin` from the member list (`owner` or `admin`) and passes `canManage` on each row
+- `choose-runtime-page.tsx` sets `canManage` from the same role check and passes it into the runtime list
+- `runtime-choice-list.tsx` renders "Connect a machine" only when `canManage` is true. Members still see the locked-remote count
+**Why:** Upstream's create flow is open to members. Forge still requires admin/owner for agent create and for connecting a machine. The server routes stay admin-gated as well.
+**Verify:** `grep -q "isWorkspaceAdmin" packages/views/agents/components/agents-page.tsx`, `grep -q 'const canManage = member?.role === "owner" || member?.role === "admin"' packages/views/agents/create/choose-runtime-page.tsx`, and `grep -B 8 'runtime_step.add_remote' packages/views/agents/create/runtime-choice-list.tsx | grep -q 'canManage ?'`
 
-### 2.7 Runtimes page — member redirect + connect button gate (F3)
+### 2.7 Runtimes page — member redirect (F3)
 **File:** `packages/views/runtimes/components/runtimes-page.tsx`
-**Changes:**
-- `memberListOptions` + `isAdmin` computed before `runtimeListOptions` (enabled: isAdmin)
-- Skeleton condition: `isLoading || membersLoading || fetching`
-- After loading: `if (!isAdmin) { navigation.push("/"); return null; }`
-- `PageHeaderBar` / `EmptyState` hide connect button for non-admins
+**Changes (post-v0.4.5, upstream replaced the page's list/header architecture with `CollectionPageHeader`):**
+- `memberListOptions(wsId)` resolves `currentMember`; `isAdmin` is `owner`/`admin` role check
+- `if (!isAdmin && currentMember !== undefined) { navigation.push("/"); return null; }` — gated on `currentMember !== undefined` (not just falsy) so it doesn't flash-redirect before the member list has loaded
+- The whole page redirects non-admins away rather than rendering a disabled connect button, since upstream's redesign has no per-member view of this page at all
 **Verify:** `grep -q "navigation.push" packages/views/runtimes/components/runtimes-page.tsx`
 
 ### 2.8 Runtime detail page — member redirect (F3 detail)
 **File:** `packages/views/runtimes/components/runtime-detail-page.tsx`
-**Change:** Fetches member role; if `!isAdmin && myRole !== null` redirects to `/`.
+**Change:** Fetches member role; if `!isAdmin && currentMember !== undefined` redirects to `/`. Gated on `currentMember` being resolved (not just falsy) so the check doesn't fire before the member list arrives.
 **Why:** Members can navigate directly to `/runtimes/{id}` via URL — must be blocked.
 **Verify:** `grep -q "navigation.push" packages/views/runtimes/components/runtime-detail-page.tsx`
 
-### 2.9 Sidebar — "Create workspace" hidden for members
-**File:** `packages/views/layout/app-sidebar.tsx`
-**Change:** `isWorkspaceAdmin` derived from `memberListOptions`; `Create workspace` menu item only renders when admin.
-**Verify:** `grep -q "isWorkspaceAdmin" packages/views/layout/app-sidebar.tsx`
+### 2.9 Rail — "Create workspace" hidden for members
+**File:** `packages/views/layout/rail-workspaces.tsx`
+**Change:** v0.8.1 replaced the sidebar with the rail. `isWorkspaceAdmin` is derived from `memberListOptions`; the Create workspace menu item renders only for owner or admin, and only when the instance allows workspace creation.
+**Verify:** `grep -q "isWorkspaceAdmin" packages/views/layout/rail-workspaces.tsx`
 
 ---
 
